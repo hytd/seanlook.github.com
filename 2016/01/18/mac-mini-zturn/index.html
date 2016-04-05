@@ -339,18 +339,8 @@
 <hr>
 <h1 id="1-破解Mac-root密码"><a href="#1-破解Mac-root密码" class="headerlink" title="1. 破解Mac root密码"></a>1. 破解Mac root密码</h1><p>找到这篇文章 <a href="http://wowking.blog.51cto.com/1638252/753774" target="_blank" rel="external">http://wowking.blog.51cto.com/1638252/753774</a> 。我们平头百姓手头哪会有刻录的Mac OS光盘，而且也没移动光驱，所以方法一就不考虑了。方法二是单用户模式，毕竟 OS X 也是*nix血统，命令行几个命令倒难不到我。</p>
 <p>可是众所周知，Mac的键盘跟普通键盘是不一样的，开机启动的时候<code>command + S</code>在一般美式键盘下到底能不能进入单用户模式呢？嗯，行的，按下mini的开机按钮之后不断 <code>win + S</code>。进入Single user model之后提示符#root&gt;，逐步输入以下命令：</p>
-<pre><code># 执行硬盘检测（只读）, 这一步可以省略
-/sbin/fsck -y
-
-# 加载文件系统（读/写）
-/sbin/mount -uaw
-
-# 删除初始化设置时的OSX生成的隐藏文件”.applesetupdone”
-rm /var/db/.AppleSetupDone
-
-# 重启
-reboot
-</code></pre><a id="more"></a>
+<figure class="highlight vala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta"># 执行硬盘检测（只读）, 这一步可以省略</span></span><br><span class="line">/sbin/fsck -y</span><br><span class="line"></span><br><span class="line"><span class="meta"># 加载文件系统（读/写）</span></span><br><span class="line">/sbin/mount -uaw</span><br><span class="line"></span><br><span class="line"><span class="meta"># 删除初始化设置时的OSX生成的隐藏文件”.applesetupdone”</span></span><br><span class="line">rm /<span class="keyword">var</span>/db/.AppleSetupDone</span><br><span class="line"></span><br><span class="line"><span class="meta"># 重启</span></span><br><span class="line">reboot</span><br></pre></td></tr></table></figure>
+<a id="more"></a>
 <p>重启后开机画面会指导你创建一个新的<strong>管理员</strong>账号，然后这个新的账号密码登陆。就是这么简单，接下来删用户抹除一切使用痕迹😄。</p>
 <p>进去之后着实令我窃喜：OS X Yosemite, 2.6 GHZ Intel Core i5, 8G DDR3, Intel Iris 1536 MB, 1TB HDD，就这配置比得上我当前的Win PC了，高兴得捡了块宝似的。优胜美地系统与我自己的Mac Book Pro一样，无缝立马开始用。</p>
 <p>然而面临的一个问题来了，现在2台工作电脑，配有2套鼠标键盘，切换太不方便了。于是我用大腿想了想，嗯，应该有专门的多台电脑间共享鼠键的软件。啪啪啪几下锁定两款<code>Sharemouse</code>、<code>Synergy</code>。</p>

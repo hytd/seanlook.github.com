@@ -461,18 +461,7 @@
 <hr>
 <h1 id="1-破解Mac-root密码"><a href="#1-破解Mac-root密码" class="headerlink" title="1. 破解Mac root密码"></a>1. 破解Mac root密码</h1><p>找到这篇文章 <a href="http://wowking.blog.51cto.com/1638252/753774">http://wowking.blog.51cto.com/1638252/753774</a> 。我们平头百姓手头哪会有刻录的Mac OS光盘，而且也没移动光驱，所以方法一就不考虑了。方法二是单用户模式，毕竟 OS X 也是*nix血统，命令行几个命令倒难不到我。</p>
 <p>可是众所周知，Mac的键盘跟普通键盘是不一样的，开机启动的时候<code>command + S</code>在一般美式键盘下到底能不能进入单用户模式呢？嗯，行的，按下mini的开机按钮之后不断 <code>win + S</code>。进入Single user model之后提示符#root&gt;，逐步输入以下命令：</p>
-<pre><code># 执行硬盘检测（只读）, 这一步可以省略
-/sbin/fsck -y
-
-# 加载文件系统（读/写）
-/sbin/mount -uaw
-
-# 删除初始化设置时的OSX生成的隐藏文件”.applesetupdone”
-rm /var/db/.AppleSetupDone
-
-# 重启
-reboot
-</code></pre>
+<figure class="highlight vala"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta"># 执行硬盘检测（只读）, 这一步可以省略</span></span><br><span class="line">/sbin/fsck -y</span><br><span class="line"></span><br><span class="line"><span class="meta"># 加载文件系统（读/写）</span></span><br><span class="line">/sbin/mount -uaw</span><br><span class="line"></span><br><span class="line"><span class="meta"># 删除初始化设置时的OSX生成的隐藏文件”.applesetupdone”</span></span><br><span class="line">rm /<span class="keyword">var</span>/db/.AppleSetupDone</span><br><span class="line"></span><br><span class="line"><span class="meta"># 重启</span></span><br><span class="line">reboot</span><br></pre></td></tr></table></figure>
           <div class="post-more-link text-center">
             <a class="btn" href="/2016/01/18/mac-mini-zturn/#more" rel="contents">
               Read more &raquo;
@@ -603,9 +592,7 @@ reboot
 <blockquote>
 <p>1. 连接到主库：pt工具连接到主库，然后自动发现主库的所有从库。默认采用show full processlist来查找从库，但是这只有在主从实例端口相同的情况下才有效。<br>3. 查找主库或者从库是否有复制过滤规则：这是为了安全而默认检查的选项。你可以关闭这个检查，但是这可能导致checksum的sql语句要么不会同步到从库，要么到了从库发现从库没有要被checksum的表，这都会导致从库同步卡库。<br>5. 开始获取表，一个个的计算。<br>6. 如果是表的第一个chunk，那么chunk-size一般为1000；如果不是表的第一个chunk，那么采用19步中分析出的结果。<br>7. 检查表结构，进行数据类型转换等，生成checksum的sql语句。<br>8. 根据表上的索引和数据的分布，选择最合适的split表的方法。<br>9. 开始checksum表。<br>10. 默认在chunk一个表之前，先删除上次这个表相关的计算结果。除非–resume。<br>14. 根据explain的结果，判断chunk的size是否超过了你定义的chunk-size的上限。如果超过了，为了不影响线上性能，这个chunk将被忽略。<br>15. 把要checksum的行加上for update锁，并计算。<br>17-18. 把计算结果存储到master_crc master_count列中。<br>19. 调整下一个chunk的大小。<br>20. 等待从库追上主库。如果没有延迟备份的从库在运行，最好检查所有的从库，如果发现延迟最大的从库延迟超过max-lag秒，pt工具在这里将暂停。<br>21. 如果发现主库的max-load超过某个阈值，pt工具在这里将暂停。<br>22. 继续下一个chunk，直到这个table被chunk完毕。<br>23-24. 等待从库执行完checksum，便于生成汇总的统计结果。每个表汇总并统计一次。<br>25-26. 循环每个表，直到结束。<br>校验结束后，在每个从库上，执行如下的sql语句即可看到是否有主从不一致发生： </p>
 </blockquote>
-<pre><code>select * from percona.checksums where master_cnt &lt;&gt; this_cnt OR master_crc &lt;&gt; this_crc OR 
-ISNULL(master_crc) &lt;&gt; ISNULL(this_crc) \G
-</code></pre>
+<figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> percona.checksums <span class="keyword">where</span> master_cnt &lt;&gt; this_cnt <span class="keyword">OR</span> master_crc &lt;&gt; this_crc <span class="keyword">OR</span> </span><br><span class="line"><span class="keyword">ISNULL</span>(master_crc) &lt;&gt; <span class="keyword">ISNULL</span>(this_crc) \G</span><br></pre></td></tr></table></figure>
           <div class="post-more-link text-center">
             <a class="btn" href="/2015/12/29/mysql_replica_pt-table-checksum/#more" rel="contents">
               Read more &raquo;
