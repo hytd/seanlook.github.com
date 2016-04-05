@@ -2,6 +2,13 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   
   <url>
+    <loc>http://seanlook.com/README.html</loc>
+    
+    <lastmod>2016-04-05T13:13:24.801Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://seanlook.com/404.html</loc>
     
     <lastmod>2016-04-05T07:25:13.154Z</lastmod>
@@ -68,13 +75,6 @@
     <loc>http://seanlook.com/2014/02/26/iptables-example/</loc>
     
     <lastmod>2016-03-02T08:23:01.941Z</lastmod>
-    
-  </url>
-  
-  <url>
-    <loc>http://seanlook.com/README.html</loc>
-    
-    <lastmod>2016-03-02T08:23:01.854Z</lastmod>
     
   </url>
   
