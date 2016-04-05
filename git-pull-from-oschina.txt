@@ -1,0 +1,16 @@
+
+hexop
+
+basedir
+
+cd source
+git pull -u origin master
+
+if non error exist
+  cd basedir
+  hexo d -g
+
+cmd
+  deploy
+  pull osc branch
+  push osc branch
