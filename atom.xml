@@ -5,7 +5,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="http://seanlook.com/"/>
-  <updated>2016-04-04T08:32:49.000Z</updated>
+  <updated>2016-05-11T08:32:49.000Z</updated>
   <id>http://seanlook.com/</id>
   
   <author>
@@ -14,6 +14,743 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>MySQL数据库开发规范-EC</title>
+    <link href="http://seanlook.com/2016/05/11/mysql-dev-principle-ec/"/>
+    <id>http://seanlook.com/2016/05/11/mysql-dev-principle-ec/</id>
+    <published>2016-05-11T08:32:49.000Z</published>
+    <updated>2016-05-11T08:32:49.000Z</updated>
+    
+    <content type="html">&lt;!-- 
+
+http://highdb.com/mysql%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83/
+http://blog.csdn.net/xlgen157387/article/details/48086607
+http://www.iteye.com/topic/1141229
+--&gt;
+&lt;p&gt;最近一段时间一边在线上抓取SQL来优化，一边在整理这个开发规范，尽量减少新的问题SQL进入生产库。今天也是对公司的开发做了一次培训，PPT就不放上来了，里面有十来个生产SQL的案例。因为规范大部分还是具有通用性，所以也借鉴了像去哪儿和赶集的规范，但实际在撰写本文的过程中，每一条规范的背后无不是在工作中有参照的反面例子的。如果时间可以的话，会抽出一部分或分析其原理，或用案例证明。&lt;/p&gt;
+&lt;h2 id=&quot;1-命名规范&quot;&gt;&lt;a href=&quot;#1-命名规范&quot; class=&quot;headerlink&quot; title=&quot;1. 命名规范&quot;&gt;&lt;/a&gt;1. 命名规范&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;库名、表名、字段名必须使用小写字母，并采用下划线分割&quot;&gt;&lt;a href=&quot;#库名、表名、字段名必须使用小写字母，并采用下划线分割&quot; class=&quot;headerlink&quot; title=&quot;库名、表名、字段名必须使用小写字母，并采用下划线分割&quot;&gt;&lt;/a&gt;库名、表名、字段名必须使用小写字母，并采用下划线分割&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;MySQL有配置参数lower_case_table_names=1，即库表名以小写存储，大小写不敏感。如果是0，则库表名以实际情况存储，大小写敏感；如果是2，以实际情况存储，但以小写比较。&lt;/li&gt;
+&lt;li&gt;如果大小写混合使用，可能存在abc，Abc，ABC等多个表共存，容易导致混乱。&lt;/li&gt;
+&lt;li&gt;字段名显示区分大小写，但实际使⽤时不区分，即不可以建立两个名字一样但大小写不一样的字段。&lt;/li&gt;
+&lt;li&gt;为了统一规范， 库名、表名、字段名使用小写字母。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;库名以-d-开头，表名以-t-开头，字段名以-f-开头&quot;&gt;&lt;a href=&quot;#库名以-d-开头，表名以-t-开头，字段名以-f-开头&quot; class=&quot;headerlink&quot; title=&quot;库名以 d 开头，表名以 t 开头，字段名以 f_ 开头&quot;&gt;&lt;/a&gt;库名以 d&lt;em&gt; 开头，表名以 t&lt;/em&gt; 开头，字段名以 f_ 开头&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;比如表 &lt;code&gt;t_crm_relation&lt;/code&gt;，中间的 crm 代表业务模块名&lt;/li&gt;
+&lt;li&gt;视图以&lt;code&gt;view_&lt;/code&gt;开头，事件以&lt;code&gt;event_&lt;/code&gt;开头，触发器以&lt;code&gt;trig_&lt;/code&gt;开头，存储过程以&lt;code&gt;proc_&lt;/code&gt;开头，函数以&lt;code&gt;func_&lt;/code&gt;开头&lt;/li&gt;
+&lt;li&gt;普通索引以&lt;code&gt;idx_col1_col2&lt;/code&gt;命名，唯一索引以&lt;code&gt;uk_col1_col2&lt;/code&gt;命名（可去掉f_公共部分）。如 idx_companyid_corpid_contacttime(f_company_id,f_corp_id,f_contact_time)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;库名、表名、字段名禁止超过32个字符，需见名知意&quot;&gt;&lt;a href=&quot;#库名、表名、字段名禁止超过32个字符，需见名知意&quot; class=&quot;headerlink&quot; title=&quot;库名、表名、字段名禁止超过32个字符，需见名知意&quot;&gt;&lt;/a&gt;库名、表名、字段名禁止超过32个字符，需见名知意&lt;/h3&gt;&lt;p&gt;库名、表名、字段名支持最多64个字符，但为了统一规范、易于辨识以及减少传输量，禁止超过32个字符&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;临时库、表名须以tmp加日期为后缀&quot;&gt;&lt;a href=&quot;#临时库、表名须以tmp加日期为后缀&quot; class=&quot;headerlink&quot; title=&quot;临时库、表名须以tmp加日期为后缀&quot;&gt;&lt;/a&gt;临时库、表名须以tmp加日期为后缀&lt;/h3&gt;&lt;p&gt;如 t_crm_relation_tmp0425。备份表也类似，形如 &lt;code&gt;_bak20160425&lt;/code&gt; 。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;按日期时间分表须符合-YYYY-MM-DD-格式&quot;&gt;&lt;a href=&quot;#按日期时间分表须符合-YYYY-MM-DD-格式&quot; class=&quot;headerlink&quot; title=&quot;按日期时间分表须符合_YYYY[MM][DD]格式&quot;&gt;&lt;/a&gt;按日期时间分表须符合_YYYY[MM][DD]格式&lt;/h3&gt;&lt;p&gt;这也是为将来有可能分表做准备的，比如&lt;code&gt;t_crm_ec_record_201403&lt;/code&gt;，但像 t_crm_contact_at201506就打破了这种规范。&lt;br&gt;不具有时间特性的，直接以 &lt;code&gt;t_tbname_001&lt;/code&gt; 这样的方式命名。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;2-库表基础规范&quot;&gt;&lt;a href=&quot;#2-库表基础规范&quot; class=&quot;headerlink&quot; title=&quot;2. 库表基础规范&quot;&gt;&lt;/a&gt;2. 库表基础规范&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;使用Innodb存储引擎&quot;&gt;&lt;a href=&quot;#使用Innodb存储引擎&quot; class=&quot;headerlink&quot; title=&quot;使用Innodb存储引擎&quot;&gt;&lt;/a&gt;使用Innodb存储引擎&lt;/h3&gt;&lt;p&gt;5.5版本开始mysql默认存储引擎就是InnoDB，5.7版本开始，系统表都放弃MyISAM了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;表字符集统一使用UTF8&quot;&gt;&lt;a href=&quot;#表字符集统一使用UTF8&quot; class=&quot;headerlink&quot; title=&quot;表字符集统一使用UTF8&quot;&gt;&lt;/a&gt;表字符集统一使用UTF8&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;UTF8字符集存储汉字占用3个字节，存储英文字符占用一个字节&lt;/li&gt;
+&lt;li&gt;校对字符集使用默认的 utf8_general_ci&lt;/li&gt;
+&lt;li&gt;连接的客户端也使用utf8，建立连接时指定charset或&lt;code&gt;SET NAMES UTF8;&lt;/code&gt;。（对于已经在项目中长期使用latin1的，救不了了）&lt;/li&gt;
+&lt;li&gt;如果遇到EMOJ等表情符号的存储需求，可申请使用UTF8MB4字符集&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;所有表都要添加注释&quot;&gt;&lt;a href=&quot;#所有表都要添加注释&quot; class=&quot;headerlink&quot; title=&quot;所有表都要添加注释&quot;&gt;&lt;/a&gt;所有表都要添加注释&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;尽量给字段也添加注释&lt;/li&gt;
+&lt;li&gt;类status型需指明主要值的含义，如”0-离线，1-在线”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;控制单表字段数量&quot;&gt;&lt;a href=&quot;#控制单表字段数量&quot; class=&quot;headerlink&quot; title=&quot;控制单表字段数量&quot;&gt;&lt;/a&gt;控制单表字段数量&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;单表字段数上限30左右，再多的话考虑垂直分表，一是冷热数据分离，二是大字段分离，三是常在一起做条件和返回列的不分离。&lt;/li&gt;
+&lt;li&gt;表字段控制少而精，可以提高IO效率，内存缓存更多有效数据，从而提高响应速度和并发能力，后续 alter table 也更快。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;所有表都必须要显式指定主键&quot;&gt;&lt;a href=&quot;#所有表都必须要显式指定主键&quot; class=&quot;headerlink&quot; title=&quot;所有表都必须要显式指定主键&quot;&gt;&lt;/a&gt;所有表都必须要显式指定主键&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;主键尽量采用自增方式，InnoDB表实际是一棵索引组织表，顺序存储可以提高存取效率，充分利用磁盘空间。还有对一些复杂查询可能需要自连接来优化时需要用到。&lt;/li&gt;
+&lt;li&gt;需要全局唯一主键时，使用外部发号器ticket server（建设中）&lt;/li&gt;
+&lt;li&gt;如果没有主键或唯一索引，update/delete是通过所有字段来定位操作的行，相当于每行就是一次全表扫描&lt;/li&gt;
+&lt;li&gt;少数情况可以使用联合唯一主键，需与DBA协商&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;不强制使用外键参考&quot;&gt;&lt;a href=&quot;#不强制使用外键参考&quot; class=&quot;headerlink&quot; title=&quot;不强制使用外键参考&quot;&gt;&lt;/a&gt;不强制使用外键参考&lt;/h3&gt;&lt;p&gt;即使2个表的字段有明确的外键参考关系，也不使用 FOREIGN KEY ，因为新纪录会去主键表做校验，影响性能。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;适度使用存储过程、视图，禁止使用触发器、事件&quot;&gt;&lt;a href=&quot;#适度使用存储过程、视图，禁止使用触发器、事件&quot; class=&quot;headerlink&quot; title=&quot;适度使用存储过程、视图，禁止使用触发器、事件&quot;&gt;&lt;/a&gt;适度使用存储过程、视图，禁止使用触发器、事件&lt;/h3&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;ul&gt;
+&lt;li&gt;存储过程（procedure）虽然可以简化业务端代码，在传统企业写复杂逻辑时可能会用到，而在互联网企业变更是很频繁的，在分库分表的情况下要升级一个存储过程相当麻烦。又因为它是不记录log的，所以也不方便debug性能问题。如果使用过程，一定考虑如果执行失败的情况。&lt;ul&gt;
+&lt;li&gt;使用视图一定程度上也是为了降低代码里SQL的复杂度，但有时候为了视图的通用性会损失性能（比如返回不必要的字段）。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;触发器（trigger）也是同样，但也不应该通过它去约束数据的强一致性，mysql只支持“基于行的触发”，也就是说，触发器始终是针对一条记录的，而不是针对整个sql语句的，如果变更的数据集非常大的话，效率会很低。掩盖一条sql背后的工作，一旦出现问题将是灾难性的，但又很难快速分析和定位。再者需要ddl时无法使用pt-osc工具。放在transaction执行。&lt;/li&gt;
+&lt;li&gt;事件（event）也是一种偷懒的表现，目前已经遇到数次由于定时任务执行失败影响业务的情况，而且mysql无法对它做失败预警。建立专门的 job scheduler 平台。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;单表数据量控制在5000w以内&quot;&gt;&lt;a href=&quot;#单表数据量控制在5000w以内&quot; class=&quot;headerlink&quot; title=&quot;单表数据量控制在5000w以内&quot;&gt;&lt;/a&gt;单表数据量控制在5000w以内&lt;/h3&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;数据库中不允许存储明文密码&quot;&gt;&lt;a href=&quot;#数据库中不允许存储明文密码&quot; class=&quot;headerlink&quot; title=&quot;数据库中不允许存储明文密码&quot;&gt;&lt;/a&gt;数据库中不允许存储明文密码&lt;/h3&gt;&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;3-字段规范&quot;&gt;&lt;a href=&quot;#3-字段规范&quot; class=&quot;headerlink&quot; title=&quot;3. 字段规范&quot;&gt;&lt;/a&gt;3. 字段规范&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;char、varchar、text等字符串类型定义&quot;&gt;&lt;a href=&quot;#char、varchar、text等字符串类型定义&quot; class=&quot;headerlink&quot; title=&quot;char、varchar、text等字符串类型定义&quot;&gt;&lt;/a&gt;char、varchar、text等字符串类型定义&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;对于长度基本固定的列，如果该列恰好更新又特别频繁，适合char&lt;/li&gt;
+&lt;li&gt;varchar虽然存储变长字符串，但不可太小也不可太大。UTF8最多能存21844个汉字，或65532个英文&lt;/li&gt;
+&lt;li&gt;varbinary(M)保存的是二进制字符串，它保存的是字节而不是字符，所以没有字符集的概念，M长度0-255（字节）。只用于排序或比较时大小写敏感的类型，不包括密码存储&lt;/li&gt;
+&lt;li&gt;TEXT类型与VARCHAR都类似，存储可变长度，最大限制也是2^16，但是它20bytes以后的内容是在数据页以外的空间存储（row_format=dynamic），对它的使用需要多一次寻址，没有默认值。&lt;br&gt;一般用于存放容量平均都很大、操作没有其它字段那样频繁的值。&lt;br&gt;网上部分文章说要避免使用text和blob，要知道如果纯用varchar可能会导致行溢出，效果差不多，但因为每行占用字节数过多，会导致buffer_pool能缓存的数据行、页下降。另外text和blob上面一般不会去建索引，而是利用sphinx之类的第三方全文搜索引擎，如果确实要创建（前缀）索引，那就会影响性能。凡事看具体场景。&lt;br&gt;另外尽可能把text/blob拆到另一个表中&lt;/li&gt;
+&lt;li&gt;BLOB可以看出varbinary的扩展版本，内容以二进制字符串存储，无字符集，区分大小写，有一种经常提但不用的场景：不要在数据库里存储图片。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;int、tinyint、decimal等数字类型定义&quot;&gt;&lt;a href=&quot;#int、tinyint、decimal等数字类型定义&quot; class=&quot;headerlink&quot; title=&quot;int、tinyint、decimal等数字类型定义&quot;&gt;&lt;/a&gt;int、tinyint、decimal等数字类型定义&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;使用tinyint来代替 enum和boolean&lt;br&gt;ENUM类型在需要修改或增加枚举值时，需要在线DDL，成本较高；ENUM列值如果含有数字类型，可能会引起默认值混淆&lt;br&gt;tinyint使用1个字节，一般用于status,type,flag的列&lt;/li&gt;
+&lt;li&gt;建议使用 UNSIGNED 存储非负数值&lt;br&gt;相比不使用 unsigned，可以扩大一倍使用数值范围&lt;/li&gt;
+&lt;li&gt;int使用固定4个字节存储，int(11)与int(4)只是显示宽度的区别&lt;/li&gt;
+&lt;li&gt;使用Decimal 代替float/double存储精确浮点数&lt;br&gt;对于货币、金额这样的类型，使用decimal，如 decimal(9,2)。float默认只能能精确到6位有效数字&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;timestamp与datetime选择&quot;&gt;&lt;a href=&quot;#timestamp与datetime选择&quot; class=&quot;headerlink&quot; title=&quot;timestamp与datetime选择&quot;&gt;&lt;/a&gt;timestamp与datetime选择&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;datetime 和 timestamp类型所占的存储空间不同，前者8个字节，后者4个字节，这样造成的后果是两者能表示的时间范围不同。前者范围为1000-01-01 00:00:00 ~ 9999-12-31 23:59:59，后者范围为 1970-01-01 08:00:01 到 2038-01-19 11:14:07 。所以 TIMESTAMP 支持的范围比 DATATIME 要小。&lt;/li&gt;
+&lt;li&gt;timestamp可以在insert/update行时，自动更新时间字段（如 f_set_time timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP），但一个表只能有一个这样的定义。&lt;/li&gt;
+&lt;li&gt;timestamp显示与时区有关，内部总是以 UTC 毫秒 来存的。还受到严格模式的限制&lt;/li&gt;
+&lt;li&gt;优先使用timestamp，datetime也没问题&lt;/li&gt;
+&lt;li&gt;where条件里不要对时间列上使用时间函数&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;建议字段都定义为NOT-NULL&quot;&gt;&lt;a href=&quot;#建议字段都定义为NOT-NULL&quot; class=&quot;headerlink&quot; title=&quot;建议字段都定义为NOT NULL&quot;&gt;&lt;/a&gt;建议字段都定义为NOT NULL&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;如果是索引字段，一定要定义为not null 。因为null值会影响cordinate统计，影响优化器对索引的选择&lt;/li&gt;
+&lt;li&gt;如果不能保证insert时一定有值过来，定义时使用default ‘’ ，或 0&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;同一意义的字段定义必须相同&quot;&gt;&lt;a href=&quot;#同一意义的字段定义必须相同&quot; class=&quot;headerlink&quot; title=&quot;同一意义的字段定义必须相同&quot;&gt;&lt;/a&gt;同一意义的字段定义必须相同&lt;/h3&gt;&lt;p&gt; 比如不同表中都有 f_user_id 字段，那么它的类型、字段长度要设计成一样&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;4-索引规范&quot;&gt;&lt;a href=&quot;#4-索引规范&quot; class=&quot;headerlink&quot; title=&quot;4. 索引规范&quot;&gt;&lt;/a&gt;4. 索引规范&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;任何新的select-update-delete上线，都要先explain，看索引使用情况&quot;&gt;&lt;a href=&quot;#任何新的select-update-delete上线，都要先explain，看索引使用情况&quot; class=&quot;headerlink&quot; title=&quot;任何新的select,update,delete上线，都要先explain，看索引使用情况&quot;&gt;&lt;/a&gt;任何新的select,update,delete上线，都要先explain，看索引使用情况&lt;/h3&gt;&lt;p&gt;尽量避免extra列出现：Using File Sort，Using Temporary，rows超过1000的要谨慎上线。&lt;br&gt;explain解读&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;type&lt;/code&gt;：ALL, index,  range, ref, eq_ref, const, system, NULL（从左到右，性能从差到好）&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;possible_keys&lt;/code&gt;：指出MySQL能使用哪个索引在表中找到记录，查询涉及到的字段上若存在索引，则该索引将被列出，但不一定被查询使用&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;key&lt;/code&gt;：表示MySQL实际决定使用的键（索引）&lt;br&gt;如果没有选择索引，键是NULL。要想强制MySQL使用或忽视possible_keys列中的索引，在查询中使用FORCE INDEX、USE INDEX或者IGNORE INDEX&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;ref&lt;/code&gt;：表示选择 &lt;code&gt;key&lt;/code&gt; 列上的索引，哪些列或常量被用于查找索引列上的值&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;rows&lt;/code&gt;：根据表统计信息及索引选用情况，估算的找到所需的记录所需要读取的行数&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;Extra&lt;/code&gt;&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;Using temporary&lt;/code&gt;：表示MySQL需要使用临时表来存储结果集，常见于排序和分组查询&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;Using filesort&lt;/code&gt;：MySQL中无法利用索引完成的排序操作称为“文件排序”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;索引个数限制&quot;&gt;&lt;a href=&quot;#索引个数限制&quot; class=&quot;headerlink&quot; title=&quot;索引个数限制&quot;&gt;&lt;/a&gt;索引个数限制&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;索引是双刃剑，会增加维护负担，增大IO压力，索引占用空间是成倍增加的&lt;/li&gt;
+&lt;li&gt;单张表的索引数量控制在5个以内，或不超过表字段个数的20%。若单张表多个字段在查询需求上都要单独用到索引，需要经过DBA评估。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;避免冗余索引&quot;&gt;&lt;a href=&quot;#避免冗余索引&quot; class=&quot;headerlink&quot; title=&quot;避免冗余索引&quot;&gt;&lt;/a&gt;避免冗余索引&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;InnoDB表是一棵索引组织表，主键是和数据放在一起的聚集索引，普通索引最终指向的是主键地址，所以把主键做最后一列是多余的。如f_crm_id作为主键，联合索引(f_user_id,f_crm_id)上的f_crm_id就完全多余&lt;/li&gt;
+&lt;li&gt;(a,b,c)、(a,b)，后者为冗余索引。可以利用前缀索引来达到加速目的，减轻维护负担&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;没有特殊要求，使用自增id作为主键&quot;&gt;&lt;a href=&quot;#没有特殊要求，使用自增id作为主键&quot; class=&quot;headerlink&quot; title=&quot;没有特殊要求，使用自增id作为主键&quot;&gt;&lt;/a&gt;没有特殊要求，使用自增id作为主键&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;主键是一种聚集索引，顺序写入。组合唯一索引作为主键的话，是随机写入，适合写少读多的表&lt;/li&gt;
+&lt;li&gt;主键不允许更新&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;索引尽量建在选择性高的列上&quot;&gt;&lt;a href=&quot;#索引尽量建在选择性高的列上&quot; class=&quot;headerlink&quot; title=&quot;索引尽量建在选择性高的列上&quot;&gt;&lt;/a&gt;索引尽量建在选择性高的列上&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;不在低基数列上建立索引，例如性别、类型。但有一种情况，idx_feedbackid_type (f_feedback_id,f_type)，如果经常用 f_type=1 比较，而且能过滤掉90%行，那这个组合索引就值得创建。有时候同样的查询语句，由于条件取值不同导致使用不同的索引，也是这个道理。&lt;/li&gt;
+&lt;li&gt;索引选择性计算方法（基数 ÷ 数据行数）&lt;br&gt;Selectivity = Cardinality / Total Rows = select count(distinct col1)/count(*) from tbname，越接近1说明col1上使用索引的过滤效果越好&lt;/li&gt;
+&lt;li&gt;走索引扫描行数超过30%时，改全表扫描&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;最左前缀原则&quot;&gt;&lt;a href=&quot;#最左前缀原则&quot; class=&quot;headerlink&quot; title=&quot;最左前缀原则&quot;&gt;&lt;/a&gt;最左前缀原则&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;mysql使用联合索引时，从左向右匹配，遇到断开或者范围查询时，无法用到后续的索引列&lt;br&gt;比如索引idx_c1_c2_c3 (c1,c2,c3)，相当于创建了(c1)、(c1,c2)、(c1,c2,c3)三个索引，where条件包含上面三种情况的字段比较则可以用到索引，但像 where c1=a and c3=c 只能用到c1列的索引，像 c2=b and c3=c等情况就完全用不到这个索引&lt;/li&gt;
+&lt;li&gt;遇到范围查询(&amp;gt;、&amp;lt;、between、like)也会停止索引匹配，比如 c1=a and c2 &amp;gt; 2 and c3=c，只有c1,c2列上的比较能用到索引，(c1,c2,c3)排列的索引才可能会都用上&lt;/li&gt;
+&lt;li&gt;where条件里面字段的顺序与索引顺序无关，mysql优化器会自动调整顺序&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;前缀索引&quot;&gt;&lt;a href=&quot;#前缀索引&quot; class=&quot;headerlink&quot; title=&quot;前缀索引&quot;&gt;&lt;/a&gt;前缀索引&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;对超过30个字符长度的列创建索引时，考虑使用前缀索引，如 idx_cs_guid2 (f_cs_guid(26))表示截取前26个字符做索引，既可以提高查找效率，也可以节省空间&lt;/li&gt;
+&lt;li&gt;前缀索引也有它的缺点是，如果在该列上 ORDER BY 或 GROUP BY 时无法使用索引，也不能把它们用作覆盖索引(Covering Index)&lt;/li&gt;
+&lt;li&gt;如果在varbinary或blob这种以二进制存储的列上建立前缀索引，要考虑字符集，括号里表示的是字节数&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;合理使用覆盖索引减少IO&quot;&gt;&lt;a href=&quot;#合理使用覆盖索引减少IO&quot; class=&quot;headerlink&quot; title=&quot;合理使用覆盖索引减少IO&quot;&gt;&lt;/a&gt;合理使用覆盖索引减少IO&lt;/h3&gt;&lt;p&gt;INNODB存储引擎中，secondary index(非主键索引，又称为辅助索引、二级索引)没有直接存储行地址，而是存储主键值。&lt;br&gt;如果用户需要查询secondary index中所不包含的数据列，则需要先通过secondary index查找到主键值，然后再通过主键查询到其他数据列，因此需要查询两次。覆盖索引则可以在一个索引中获取所有需要的数据列，从而避免回表进行二次查找，节省IO因此效率较高。&lt;br&gt;例如SELECT email，uid FROM user_email WHERE uid=xx，如果uid不是主键，适当时候可以将索引添加为index(uid，email)，以获得性能提升。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;尽量不要在频繁更新的列上创建索引&quot;&gt;&lt;a href=&quot;#尽量不要在频繁更新的列上创建索引&quot; class=&quot;headerlink&quot; title=&quot;尽量不要在频繁更新的列上创建索引&quot;&gt;&lt;/a&gt;尽量不要在频繁更新的列上创建索引&lt;/h3&gt;&lt;p&gt;如不在定义了 ON UPDATE CURRENT_STAMP 的列上创建索引，维护成本太高（好在mysql有insert buffer，会合并索引的插入）&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;5-SQL设计&quot;&gt;&lt;a href=&quot;#5-SQL设计&quot; class=&quot;headerlink&quot; title=&quot;5. SQL设计&quot;&gt;&lt;/a&gt;5. SQL设计&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;杜绝直接-SELECT-读取全部字段&quot;&gt;&lt;a href=&quot;#杜绝直接-SELECT-读取全部字段&quot; class=&quot;headerlink&quot; title=&quot;杜绝直接 SELECT * 读取全部字段&quot;&gt;&lt;/a&gt;杜绝直接 SELECT * 读取全部字段&lt;/h3&gt;&lt;p&gt; 即使需要所有字段，减少网络带宽消耗，能有效利用覆盖索引，表结构变更对程序基本无影响&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;能确定返回结果只有一条时，使用-limit-1&quot;&gt;&lt;a href=&quot;#能确定返回结果只有一条时，使用-limit-1&quot; class=&quot;headerlink&quot; title=&quot;能确定返回结果只有一条时，使用 limit 1&quot;&gt;&lt;/a&gt;能确定返回结果只有一条时，使用 limit 1&lt;/h3&gt;&lt;p&gt;&lt;strong&gt;在保证数据不会有误的前提下&lt;/strong&gt;，能确定结果集数量时，多使用limit，尽快的返回结果。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;小心隐式类型转换&quot;&gt;&lt;a href=&quot;#小心隐式类型转换&quot; class=&quot;headerlink&quot; title=&quot;小心隐式类型转换&quot;&gt;&lt;/a&gt;小心隐式类型转换&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;&lt;p&gt;转换规则&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;a. 两个参数至少有一个是 NULL 时，比较的结果也是 NULL，例外是使用 &amp;lt;=&amp;gt; 对两个 NULL 做比较时会返回 1，这两种情况都不需要做类型转换&lt;br&gt;b. 两个参数都是字符串，会按照字符串来比较，不做类型转换&lt;br&gt;c. 两个参数都是整数，按照整数来比较，不做类型转换&lt;br&gt;d. 十六进制的值和非数字做比较时，会被当做二进制串&lt;br&gt;e. 有一个参数是 TIMESTAMP 或 DATETIME，并且另外一个参数是常量，常量会被转换为 timestamp&lt;br&gt;f. 有一个参数是 decimal 类型，如果另外一个参数是 decimal 或者整数，会将整数转换为 decimal 后进行比较，如果另外一个参数是浮点数，则会把 decimal 转换为浮点数进行比较&lt;br&gt;g. 所有其他情况下，两个参数都会被转换为浮点数再进行比较。&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;p&gt;如果一个索引建立在string类型上，如果这个字段和一个int类型的值比较，符合第 g 条。如f_phone定义的类型是varchar，但where使用f_phone in (098890)，两个参数都会被当成成浮点型。发生这个隐式转换并不是最糟的，最糟的是string转换后的float，mysql无法使用索引，这才导致了性能问题。如果是 f_user_id = ‘1234567’ 的情况，符合第 b 条,直接把数字当字符串比较。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;禁止在where条件列上使用函数&quot;&gt;&lt;a href=&quot;#禁止在where条件列上使用函数&quot; class=&quot;headerlink&quot; title=&quot;禁止在where条件列上使用函数&quot;&gt;&lt;/a&gt;禁止在where条件列上使用函数&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;会导致索引失效，如lower(email)，f_qq % 4。可放到右边的常量上计算&lt;/li&gt;
+&lt;li&gt;返回小结果集不是很大的情况下，可以对返回列使用函数，简化程序开发&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;使用like模糊匹配，-不要放首位&quot;&gt;&lt;a href=&quot;#使用like模糊匹配，-不要放首位&quot; class=&quot;headerlink&quot; title=&quot;使用like模糊匹配，%不要放首位&quot;&gt;&lt;/a&gt;使用like模糊匹配，%不要放首位&lt;/h3&gt;&lt;p&gt;会导致索引失效，有这种搜索需求是，考虑其它方案，如sphinx全文搜索&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;涉及到复杂sql时，务必先参考已有索引设计，先explain&quot;&gt;&lt;a href=&quot;#涉及到复杂sql时，务必先参考已有索引设计，先explain&quot; class=&quot;headerlink&quot; title=&quot;涉及到复杂sql时，务必先参考已有索引设计，先explain&quot;&gt;&lt;/a&gt;涉及到复杂sql时，务必先参考已有索引设计，先explain&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;简单SQL拆分，不以代码处理复杂为由。&lt;/li&gt;
+&lt;li&gt;比如 OR 条件： f_phone=’10000’ or f_mobile=’10000’，两个字段各自有索引，但只能用到其中一个。可以拆分成2个sql，或者union all。&lt;/li&gt;
+&lt;li&gt;先explain的好处是可以为了利用索引，增加更多查询限制条件&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;使用join时，where条件尽量使用充分利用同一表上的索引&quot;&gt;&lt;a href=&quot;#使用join时，where条件尽量使用充分利用同一表上的索引&quot; class=&quot;headerlink&quot; title=&quot;使用join时，where条件尽量使用充分利用同一表上的索引&quot;&gt;&lt;/a&gt;使用join时，where条件尽量使用充分利用同一表上的索引&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;如 select t1.a,t2.b * from t1,t2 and t1.a=t2.a and t1.b=123 and t2.c= 4 ，如果t1.c与t2.c字段相同，那么t1上的索引(b,c)就只用到b了。此时如果把where条件中的t2.c=4改成t1.c=4，那么可以用到完整的索引&lt;/li&gt;
+&lt;li&gt;这种情况可能会在字段冗余设计（反范式）时出现&lt;/li&gt;
+&lt;li&gt;正确选取inner join和left join&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;少用子查询，改用join&quot;&gt;&lt;a href=&quot;#少用子查询，改用join&quot; class=&quot;headerlink&quot; title=&quot;少用子查询，改用join&quot;&gt;&lt;/a&gt;少用子查询，改用join&lt;/h3&gt;&lt;p&gt;小于5.6版本时，子查询效率很低，不像Oracle那样先计算子查询后外层查询。5.6版本开始得到优化&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;考虑使用union-all，少使用union，注意考虑去重&quot;&gt;&lt;a href=&quot;#考虑使用union-all，少使用union，注意考虑去重&quot; class=&quot;headerlink&quot; title=&quot;考虑使用union all，少使用union，注意考虑去重&quot;&gt;&lt;/a&gt;考虑使用union all，少使用union，注意考虑去重&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;union all不去重，而少了排序操作，速度相对比union要快，如果没有去重的需求，优先使用union all&lt;/li&gt;
+&lt;li&gt;如果UNION结果中有使用limit，在2个子SQL可能有许多返回值的情况下，各自加上limit。如果还有order by，请找DBA。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;IN的内容尽量不超过200个&quot;&gt;&lt;a href=&quot;#IN的内容尽量不超过200个&quot; class=&quot;headerlink&quot; title=&quot;IN的内容尽量不超过200个&quot;&gt;&lt;/a&gt;IN的内容尽量不超过200个&lt;/h3&gt;&lt;p&gt;超过500个值使用批量的方式，否则一次执行会影响数据库的并发能力，因为单SQL只能且一直占用单CPU，而且可能导致主从复制延迟&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;拒绝大事务&quot;&gt;&lt;a href=&quot;#拒绝大事务&quot; class=&quot;headerlink&quot; title=&quot;拒绝大事务&quot;&gt;&lt;/a&gt;拒绝大事务&lt;/h3&gt;&lt;p&gt;比如在一个事务里进行多个select，多个update，如果是高频事务，会严重影响MySQL并发能力，因为事务持有的锁等资源只在事务rollback/commit时才能释放。但同时也要权衡数据写入的一致性。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;避免使用is-null-is-not-null这样的比较&quot;&gt;&lt;a href=&quot;#避免使用is-null-is-not-null这样的比较&quot; class=&quot;headerlink&quot; title=&quot;避免使用is null, is not null这样的比较&quot;&gt;&lt;/a&gt;避免使用is null, is not null这样的比较&lt;/h3&gt;&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;order-by-limit&quot;&gt;&lt;a href=&quot;#order-by-limit&quot; class=&quot;headerlink&quot; title=&quot;order by .. limit&quot;&gt;&lt;/a&gt;order by .. limit&lt;/h3&gt;&lt;p&gt;这种查询更多的是通过索引去优化，但order by的字段有讲究，比如主键id与f_time都是顺序递增，那就可以考虑order by id而非 f_time 。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;c1-lt-a-order-by-c2&quot;&gt;&lt;a href=&quot;#c1-lt-a-order-by-c2&quot; class=&quot;headerlink&quot; title=&quot;c1 &amp;lt; a order by c2&quot;&gt;&lt;/a&gt;c1 &amp;lt; a order by c2&lt;/h3&gt;&lt;p&gt;与上面不同的是，order by之前有个范围查询，由前面的内容可知，用不到类似(c1,c2)的索引，但是可以利用(c2,c1)索引。另外还可以改写成join的方式实现。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;分页优化&quot;&gt;&lt;a href=&quot;#分页优化&quot; class=&quot;headerlink&quot; title=&quot;分页优化&quot;&gt;&lt;/a&gt;分页优化&lt;/h3&gt;&lt;p&gt;建议使用合理的分页方式以提高分页效率，大页情况下不使用跳跃式分页&lt;br&gt;假如有类似下面分页语句:&lt;br&gt;SELECT &lt;em&gt; FROM table1 ORDER BY ftime DESC LIMIT 10000,10;&lt;br&gt;这种分页方式会导致大量的io，因为MySQL使用的是提前读取策略。&lt;br&gt;推荐分页方式：&lt;br&gt;SELECT &lt;/em&gt; FROM table1  WHERE ftime &amp;lt; last_time ORDER BY ftime DESC LIMIT 10&lt;br&gt;即传入上一次分页的界值&lt;/p&gt;
+&lt;p&gt;SELECT * FROM table as t1 inner JOIN (SELECT id FROM table ORDER BY time LIMIT 10000，10) as t2 ON t1.id=t2.id&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;count计数&quot;&gt;&lt;a href=&quot;#count计数&quot; class=&quot;headerlink&quot; title=&quot;count计数&quot;&gt;&lt;/a&gt;count计数&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;首先count(&lt;em&gt;)、count(1)、count(col1)是有区别的，count(&lt;/em&gt;)表示整个结果集有多少条记录，count(1)表示结果集里以primary key统计数量，绝大多数情况下count(&lt;em&gt;)与count(1)效果一样的，但count(col1)表示的是结果集里 col1 列 NOT null 的记录数。优先采用count(&lt;/em&gt;)&lt;/li&gt;
+&lt;li&gt;大数据量count是消耗资源的操作，甚至会拖慢整个库，查询性能问题无法解决的，应从产品设计上进行重构。例如当频繁需要count的查询，考虑使用汇总表&lt;/li&gt;
+&lt;li&gt;遇到distinct的情况，group by方式可能效率更高。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;delete-update语句改成select再explain&quot;&gt;&lt;a href=&quot;#delete-update语句改成select再explain&quot; class=&quot;headerlink&quot; title=&quot;delete,update语句改成select再explain&quot;&gt;&lt;/a&gt;delete,update语句改成select再explain&lt;/h3&gt;&lt;p&gt;select最多导致数据库慢，写操作才是锁表的罪魁祸首&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;减少与数据库交互的次数，尽量采用批量SQL语句&quot;&gt;&lt;a href=&quot;#减少与数据库交互的次数，尽量采用批量SQL语句&quot; class=&quot;headerlink&quot; title=&quot;减少与数据库交互的次数，尽量采用批量SQL语句&quot;&gt;&lt;/a&gt;减少与数据库交互的次数，尽量采用批量SQL语句&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;&lt;code&gt;INSERT ... ON DUPLICATE KEY UPDATE ...&lt;/code&gt;，插入行后会导致在一个UNIQUE索引或PRIMARY KEY中出现重复值，则执行旧行UPDATE，如果不重复则直接插入，影响1行。&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;REPLACE INTO&lt;/code&gt;类似，但它是冲突时删除旧行。&lt;code&gt;INSERT IGNORE&lt;/code&gt;相反，保留旧行，丢弃要插入的新行。&lt;/li&gt;
+&lt;li&gt;INSERT INTO VALUES(),(),()，合并插入。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;杜绝危险SQL&quot;&gt;&lt;a href=&quot;#杜绝危险SQL&quot; class=&quot;headerlink&quot; title=&quot;杜绝危险SQL&quot;&gt;&lt;/a&gt;杜绝危险SQL&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;去掉where 1=1 这样无意义或恒真的条件，如果遇到update/delete或遭到sql注入就恐怖了&lt;/li&gt;
+&lt;li&gt;SQL中不允许出现DDL语句。一般也不给予create/alter这类权限，但阿里云RDS只区分读写用户&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;6-行为规范&quot;&gt;&lt;a href=&quot;#6-行为规范&quot; class=&quot;headerlink&quot; title=&quot;6. 行为规范&quot;&gt;&lt;/a&gt;6. 行为规范&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;不允许在DBA不知情的情况下导现网数据&lt;/li&gt;
+&lt;li&gt;大批量更新，如修复数据，避开高峰期，并通知DBA。直接执行sql的由运维或DBA同事操作&lt;/li&gt;
+&lt;li&gt;及时处理已下线业务的SQL&lt;/li&gt;
+&lt;li&gt;复杂sql上线审核&lt;br&gt;因为目前还没有SQL审查机制，复杂sql如多表join,count,group by，主动上报DBA评估。&lt;/li&gt;
+&lt;li&gt;重要项目的数据库方案选型和设计必须提前通知DBA参与&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id=&quot;本文参考&quot;&gt;&lt;a href=&quot;#本文参考&quot; class=&quot;headerlink&quot; title=&quot;本文参考&quot;&gt;&lt;/a&gt;本文参考&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://wangwei007.blog.51cto.com/68019/1709769&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;互联网MySQL开发规范&lt;/a&gt; 这个基本也是《去哪儿MySQL开发规范.pdf》版本&lt;/li&gt;
+&lt;li&gt;MySQL数据库开发的三十六条军规&lt;em&gt;石展&lt;/em&gt;完整.pdf&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://imysql.com/2015/07/23/something-important-about-mysql-design-reference.shtml&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;老叶观点：MySQL开发规范之我见&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://blog.csdn.net/xlgen157387/article/details/48086607&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL开发规范与使用技巧总结&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://highdb.com/mysql%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://highdb.com/mysql%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83/&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;p&gt;本文链接地址：&lt;a href=&quot;http://seanlook.com/2016/05/11/mysql-dev-principle-ec/&quot;&gt;http://seanlook.com/2016/05/11/mysql-dev-principle-ec/&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;!-- 
+
+http://highdb.com/mysql%E5%BC%80%E5%8F%91%E8%A7%84%E8%8C%83/
+http://blog.csdn.net/xlgen157387/article/details/48086607
+http://www.iteye.com/topic/1141229
+--&gt;
+&lt;p&gt;最近一段时间一边在线上抓取SQL来优化，一边在整理这个开发规范，尽量减少新的问题SQL进入生产库。今天也是对公司的开发做了一次培训，PPT就不放上来了，里面有十来个生产SQL的案例。因为规范大部分还是具有通用性，所以也借鉴了像去哪儿和赶集的规范，但实际在撰写本文的过程中，每一条规范的背后无不是在工作中有参照的反面例子的。如果时间可以的话，会抽出一部分或分析其原理，或用案例证明。&lt;/p&gt;
+&lt;h2 id=&quot;1-命名规范&quot;&gt;&lt;a href=&quot;#1-命名规范&quot; class=&quot;headerlink&quot; title=&quot;1. 命名规范&quot;&gt;&lt;/a&gt;1. 命名规范&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;库名、表名、字段名必须使用小写字母，并采用下划线分割&quot;&gt;&lt;a href=&quot;#库名、表名、字段名必须使用小写字母，并采用下划线分割&quot; class=&quot;headerlink&quot; title=&quot;库名、表名、字段名必须使用小写字母，并采用下划线分割&quot;&gt;&lt;/a&gt;库名、表名、字段名必须使用小写字母，并采用下划线分割&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;MySQL有配置参数lower_case_table_names=1，即库表名以小写存储，大小写不敏感。如果是0，则库表名以实际情况存储，大小写敏感；如果是2，以实际情况存储，但以小写比较。&lt;/li&gt;
+&lt;li&gt;如果大小写混合使用，可能存在abc，Abc，ABC等多个表共存，容易导致混乱。&lt;/li&gt;
+&lt;li&gt;字段名显示区分大小写，但实际使⽤时不区分，即不可以建立两个名字一样但大小写不一样的字段。&lt;/li&gt;
+&lt;li&gt;为了统一规范， 库名、表名、字段名使用小写字母。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;库名以-d-开头，表名以-t-开头，字段名以-f-开头&quot;&gt;&lt;a href=&quot;#库名以-d-开头，表名以-t-开头，字段名以-f-开头&quot; class=&quot;headerlink&quot; title=&quot;库名以 d 开头，表名以 t 开头，字段名以 f_ 开头&quot;&gt;&lt;/a&gt;库名以 d&lt;em&gt; 开头，表名以 t&lt;/em&gt; 开头，字段名以 f_ 开头&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;比如表 &lt;code&gt;t_crm_relation&lt;/code&gt;，中间的 crm 代表业务模块名&lt;/li&gt;
+&lt;li&gt;视图以&lt;code&gt;view_&lt;/code&gt;开头，事件以&lt;code&gt;event_&lt;/code&gt;开头，触发器以&lt;code&gt;trig_&lt;/code&gt;开头，存储过程以&lt;code&gt;proc_&lt;/code&gt;开头，函数以&lt;code&gt;func_&lt;/code&gt;开头&lt;/li&gt;
+&lt;li&gt;普通索引以&lt;code&gt;idx_col1_col2&lt;/code&gt;命名，唯一索引以&lt;code&gt;uk_col1_col2&lt;/code&gt;命名（可去掉f_公共部分）。如 idx_companyid_corpid_contacttime(f_company_id,f_corp_id,f_contact_time)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;库名、表名、字段名禁止超过32个字符，需见名知意&quot;&gt;&lt;a href=&quot;#库名、表名、字段名禁止超过32个字符，需见名知意&quot; class=&quot;headerlink&quot; title=&quot;库名、表名、字段名禁止超过32个字符，需见名知意&quot;&gt;&lt;/a&gt;库名、表名、字段名禁止超过32个字符，需见名知意&lt;/h3&gt;&lt;p&gt;库名、表名、字段名支持最多64个字符，但为了统一规范、易于辨识以及减少传输量，禁止超过32个字符&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;临时库、表名须以tmp加日期为后缀&quot;&gt;&lt;a href=&quot;#临时库、表名须以tmp加日期为后缀&quot; class=&quot;headerlink&quot; title=&quot;临时库、表名须以tmp加日期为后缀&quot;&gt;&lt;/a&gt;临时库、表名须以tmp加日期为后缀&lt;/h3&gt;&lt;p&gt;如 t_crm_relation_tmp0425。备份表也类似，形如 &lt;code&gt;_bak20160425&lt;/code&gt; 。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;按日期时间分表须符合-YYYY-MM-DD-格式&quot;&gt;&lt;a href=&quot;#按日期时间分表须符合-YYYY-MM-DD-格式&quot; class=&quot;headerlink&quot; title=&quot;按日期时间分表须符合_YYYY[MM][DD]格式&quot;&gt;&lt;/a&gt;按日期时间分表须符合_YYYY[MM][DD]格式&lt;/h3&gt;&lt;p&gt;这也是为将来有可能分表做准备的，比如&lt;code&gt;t_crm_ec_record_201403&lt;/code&gt;，但像 t_crm_contact_at201506就打破了这种规范。&lt;br&gt;不具有时间特性的，直接以 &lt;code&gt;t_tbname_001&lt;/code&gt; 这样的方式命名。&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;h2 id=&quot;2-库表基础规范&quot;&gt;&lt;a href=&quot;#2-库表基础规范&quot; class=&quot;headerlink&quot; title=&quot;2. 库表基础规范&quot;&gt;&lt;/a&gt;2. 库表基础规范&lt;/h2&gt;&lt;ol&gt;
+&lt;li&gt;&lt;h3 id=&quot;使用Innodb存储引擎&quot;&gt;&lt;a href=&quot;#使用Innodb存储引擎&quot; class=&quot;headerlink&quot; title=&quot;使用Innodb存储引擎&quot;&gt;&lt;/a&gt;使用Innodb存储引擎&lt;/h3&gt;&lt;p&gt;5.5版本开始mysql默认存储引擎就是InnoDB，5.7版本开始，系统表都放弃MyISAM了。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;表字符集统一使用UTF8&quot;&gt;&lt;a href=&quot;#表字符集统一使用UTF8&quot; class=&quot;headerlink&quot; title=&quot;表字符集统一使用UTF8&quot;&gt;&lt;/a&gt;表字符集统一使用UTF8&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;UTF8字符集存储汉字占用3个字节，存储英文字符占用一个字节&lt;/li&gt;
+&lt;li&gt;校对字符集使用默认的 utf8_general_ci&lt;/li&gt;
+&lt;li&gt;连接的客户端也使用utf8，建立连接时指定charset或&lt;code&gt;SET NAMES UTF8;&lt;/code&gt;。（对于已经在项目中长期使用latin1的，救不了了）&lt;/li&gt;
+&lt;li&gt;如果遇到EMOJ等表情符号的存储需求，可申请使用UTF8MB4字符集&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;所有表都要添加注释&quot;&gt;&lt;a href=&quot;#所有表都要添加注释&quot; class=&quot;headerlink&quot; title=&quot;所有表都要添加注释&quot;&gt;&lt;/a&gt;所有表都要添加注释&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;尽量给字段也添加注释&lt;/li&gt;
+&lt;li&gt;类status型需指明主要值的含义，如”0-离线，1-在线”&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;控制单表字段数量&quot;&gt;&lt;a href=&quot;#控制单表字段数量&quot; class=&quot;headerlink&quot; title=&quot;控制单表字段数量&quot;&gt;&lt;/a&gt;控制单表字段数量&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;单表字段数上限30左右，再多的话考虑垂直分表，一是冷热数据分离，二是大字段分离，三是常在一起做条件和返回列的不分离。&lt;/li&gt;
+&lt;li&gt;表字段控制少而精，可以提高IO效率，内存缓存更多有效数据，从而提高响应速度和并发能力，后续 alter table 也更快。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;所有表都必须要显式指定主键&quot;&gt;&lt;a href=&quot;#所有表都必须要显式指定主键&quot; class=&quot;headerlink&quot; title=&quot;所有表都必须要显式指定主键&quot;&gt;&lt;/a&gt;所有表都必须要显式指定主键&lt;/h3&gt;&lt;ul&gt;
+&lt;li&gt;主键尽量采用自增方式，InnoDB表实际是一棵索引组织表，顺序存储可以提高存取效率，充分利用磁盘空间。还有对一些复杂查询可能需要自连接来优化时需要用到。&lt;/li&gt;
+&lt;li&gt;需要全局唯一主键时，使用外部发号器ticket server（建设中）&lt;/li&gt;
+&lt;li&gt;如果没有主键或唯一索引，update/delete是通过所有字段来定位操作的行，相当于每行就是一次全表扫描&lt;/li&gt;
+&lt;li&gt;少数情况可以使用联合唯一主键，需与DBA协商&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;不强制使用外键参考&quot;&gt;&lt;a href=&quot;#不强制使用外键参考&quot; class=&quot;headerlink&quot; title=&quot;不强制使用外键参考&quot;&gt;&lt;/a&gt;不强制使用外键参考&lt;/h3&gt;&lt;p&gt;即使2个表的字段有明确的外键参考关系，也不使用 FOREIGN KEY ，因为新纪录会去主键表做校验，影响性能。&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;h3 id=&quot;适度使用存储过程、视图，禁止使用触发器、事件&quot;&gt;&lt;a href=&quot;#适度使用存储过程、视图，禁止使用触发器、事件&quot; class=&quot;headerlink&quot; title=&quot;适度使用存储过程、视图，禁止使用触发器、事件&quot;&gt;&lt;/a&gt;适度使用存储过程、视图，禁止使用触发器、事件&lt;/h3&gt;&lt;/li&gt;
+&lt;/ol&gt;
+    
+    </summary>
+    
+      <category term="MySQL" scheme="http://seanlook.com/categories/MySQL/"/>
+    
+    
+      <category term="mysql" scheme="http://seanlook.com/tags/mysql/"/>
+    
+      <category term="规范" scheme="http://seanlook.com/tags/%E8%A7%84%E8%8C%83/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>MySQL数字类型int与tinyint、float与decimal如何选择</title>
+    <link href="http://seanlook.com/2016/04/29/mysql-numeric-int-float/"/>
+    <id>http://seanlook.com/2016/04/29/mysql-numeric-int-float/</id>
+    <published>2016-04-29T08:32:49.000Z</published>
+    <updated>2016-04-29T08:32:49.000Z</updated>
+    
+    <content type="html">&lt;p&gt;最近在准备给开发做一个mysql数据库开发规范方面培训，一步一步来，结合在生产环境发现的数据库方面的问题，从几个常用的数据类型说起。&lt;/p&gt;
+&lt;h2 id=&quot;int、tinyint与bigint&quot;&gt;&lt;a href=&quot;#int、tinyint与bigint&quot; class=&quot;headerlink&quot; title=&quot;int、tinyint与bigint&quot;&gt;&lt;/a&gt;int、tinyint与bigint&lt;/h2&gt;&lt;p&gt;它们都是（精确）整型数据类型，但是占用字节数和表达的范围不同。首先没有这个表就说不过去了：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Type&lt;/th&gt;
+&lt;th&gt;Storage&lt;/th&gt;
+&lt;th&gt;Minimum Value&lt;/th&gt;
+&lt;th&gt;Maximum Value&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;(Bytes)&lt;/td&gt;
+&lt;td&gt;(Signed/Unsigned)&lt;/td&gt;
+&lt;td&gt;(Signed/Unsigned)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;TINYINT&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;-128&lt;/td&gt;
+&lt;td&gt;127&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;255&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SMALLINT&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;-32768&lt;/td&gt;
+&lt;td&gt;32767&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;65535&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;MEDIUMINT&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;-8388608&lt;/td&gt;
+&lt;td&gt;8388607&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;16777215&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;INT&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;-2147483648&lt;/td&gt;
+&lt;td&gt;2147483647&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;4294967295&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;BIGINT&lt;/td&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;-9223372036854775808&lt;/td&gt;
+&lt;td&gt;9223372036854775807&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;18446744073709551615&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;只需要知道对应类型占多少字节就能推算出范围了，比如int占 4 bytes,即4*8=32bits，大约10位数字，也能理解为什么int默认显示位数是11。&lt;/p&gt;
+&lt;p&gt;遇到比较多的是tinyint和bigint，tinyint一般用于存放status,type这种数值小的数据，不够用时可能会用smallint。bigint一般用于自增主键。&lt;/p&gt;
+&lt;p&gt;为了避免数据库被过度设计，布尔、枚举类型也采用tinyint。&lt;/p&gt;
+&lt;p&gt;还有一点也是经常被提到的关于 int(M) 中M的理解，int型数据无论是int(4)还是int(11)，都已经占用了 4 bytes 存储空间，M表示的只是显示宽度(display width, max value 255)，并不是定义int的长度。&lt;/p&gt;
+&lt;p&gt;例如：&lt;/p&gt;
+&lt;figure class=&quot;highlight gherkin&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; CREATE TABLE `tc_integer` (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_id` bigint(20) PRIMARY KEY AUTO_INCREMENT,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_type` tinyint,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_flag` tinyint(1),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_num` smallint(5) unsigned ZEROFILL&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;) ENGINE=InnoDB DEFAULT CHARSET=utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; desc tc_integer;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----------------+-------------------------------+------+-----+---------+----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; Field          &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Type                          &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Null &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Key &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Default &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Extra          &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----------------+-------------------------------+------+-----+---------+----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_id           &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; bigint(20)                    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NO   &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; PRI &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; auto_increment &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_type         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; tinyint(4)                    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; YES  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;     &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;                &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_flag         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; tinyint(1)                    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; YES  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;     &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;                &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_num          &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; smallint(5) unsigned zerofill &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; YES  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;     &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;                &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----------------+-------------------------------+------+-----+---------+----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4 rows in set (0.01 sec)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;插入几条数据看一下：&lt;br&gt;&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;&lt;/p&gt;
+&lt;figure class=&quot;highlight asciidoc&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;29&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;30&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_integer values(1, 1, 1, 1);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 row affected (0.02 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_integer values(9223372036854775808, 127, 127, 65535);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 row affected, 1 warning (0.01 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; show warnings;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Level   | Code | Message                                       |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Warning | 1264 | Out of range value for column &#39;f_id&#39; at row 1 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 row in set (0.00 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; select i.*, length(i.f_flag) as len_flag from tc_integer i;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------------------+--------------+---------------+----------------+----------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| f_id                | f_type       | f_flag        | f_num          | len_flag |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------------------+--------------+---------------+----------------+----------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|                   1 |            1 |             1 |          00001 |        1 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| 9223372036854775807 |          127 |           127 |          65535 |        3 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------------------+--------------+---------------+----------------+----------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2 rows in set (0.00 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; select * from tc_integer where f_num=&#39; 01&#39; and f_num=1 and f_num=f_flag;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------+--------------+---------------+----------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| f_id | f_type       | f_flag        | f_num          |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------+--------------+---------------+----------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;|    1 |            1 |             1 |          00001 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------+--------------+---------------+----------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 row in set (0.00 sec)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;上面的实验说明了几个问题：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;f_id列插入比最大值还大的数，出现warnings，并且最终的值自动变成 9223372036854775807 。这个坑曾经在迁移到阿里RDS时遇到过，他们的迁移工具是java写的，结果我们的主键值大于java INTEGER里面的最大限制，导致 duplicate key问题。&lt;/li&gt;
+&lt;li&gt;f_flag的显示宽度为1，但并不影响更多位数的显示。也证实了tinyint(1)并不像char(1)那样限制存储长度&lt;/li&gt;
+&lt;li&gt;f_num定义成无符号的zerofill类型，能存储的最大数值是65535，而signed才是32767。（当列上使用zerofill时，unsigned会自动加上）&lt;/li&gt;
+&lt;li&gt;zerofill的作用是在显示检索结果的时候，左边用0补齐到display width，实际存储时不补0的，仅作为返回结果meta data的一部分。查询的条件值忽略0和空格&lt;/li&gt;
+&lt;li&gt;length()在numeric类型中作用于char_length()一样，因为字节数已经固定了。&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;zerofill的使用可能会在复杂join时因为了解不够深入而带来问题，所以最终的结论也很简单：除非极端的特殊需要，尽量不用zerofill，建表时这类int无需指定 (11) 这样的显示宽度。&lt;/p&gt;
+&lt;h2 id=&quot;float与decimal&quot;&gt;&lt;a href=&quot;#float与decimal&quot; class=&quot;headerlink&quot; title=&quot;float与decimal&quot;&gt;&lt;/a&gt;float与decimal&lt;/h2&gt;&lt;p&gt;MySQL使用&lt;code&gt;DECIMAL&lt;/code&gt;类型去存储对精度要求比较高的数值，比如金额，也叫定点数，decimal在mysql内存是以字符串存储的。声明语法是&lt;code&gt;DECIMAL(M,D)&lt;/code&gt;，占用字节 M+2 bytes。M是数字最大位数（精度precision），范围1-65；D是小数点右侧数字个数（标度scale），范围0-30，但不得超过M。&lt;/p&gt;
+&lt;p&gt;比如定义&lt;code&gt;DECIMAL(7,3)&lt;/code&gt;：&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;能存的数值范围是 -9999.999 ~ 9999.999，占用9个字节&lt;/li&gt;
+&lt;li&gt;123.12 -&amp;gt; 123.120，因为小数点后未满3位，补0&lt;/li&gt;
+&lt;li&gt;123.1245 -&amp;gt; 123.125，小数点只留3位，多余的自动四舍五入截断&lt;/li&gt;
+&lt;li&gt;12345.12 -&amp;gt; 保存失败，因为小数点未满3位，补0变成12345.120，超过了7位。严格模式下报错，非严格模式存成9999.999&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;MySQL使用&lt;code&gt;FLOAT&lt;/code&gt;和&lt;code&gt;DOUBLE&lt;/code&gt;来表示近似数值类型，这是因为十进制0.1在电脑里用二进制是无法精确表示的，&lt;a href=&quot;https://segmentfault.com/a/1190000004112565&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;只能尽可能的接近&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;单精度浮点数float占4字节，float标准语法允许通过&lt;code&gt;FLOAT(M)&lt;/code&gt;的形式指定精度，但是这个精度值M只是决定存储大小： 0-23与默认不指定效果相同，24-53就变成双精度的&lt;code&gt;DOUBLE&lt;/code&gt;了。&lt;/p&gt;
+&lt;p&gt;float还有非MySQL自己实现的&lt;em&gt;非标准&lt;/em&gt;语法&lt;code&gt;FLOAT(M,D)&lt;/code&gt;，代表最多存储M个数字长度，其中小数点后数字个数为D。效果与 DECIMAL(M,D)很相似。&lt;/p&gt;
+&lt;p&gt;double 和 float 的区别是double精度高，有效数字16位（float精度7位）。但double消耗内存是float的两倍，占8字节，double的运算速度比float慢得多。&lt;/p&gt;
+&lt;figure class=&quot;highlight asciidoc&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;msyql&amp;gt; create table tc&lt;span class=&quot;emphasis&quot;&gt;_float(fid int primary key auto_&lt;/span&gt;increment,f&lt;span class=&quot;emphasis&quot;&gt;_float float, f_&lt;/span&gt;float10 float(10), f&lt;span class=&quot;emphasis&quot;&gt;_float25 float(25), f_&lt;/span&gt;float7&lt;span class=&quot;emphasis&quot;&gt;_3 float(7,3), f_&lt;/span&gt;float9&lt;span class=&quot;emphasis&quot;&gt;_2 float(9,2), f_&lt;/span&gt;float30&lt;span class=&quot;emphasis&quot;&gt;_3 float(30,3), f_&lt;/span&gt;decimal9&lt;span class=&quot;emphasis&quot;&gt;_2 decimal(9,2));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_float(f_&lt;/span&gt;float,f&lt;span class=&quot;emphasis&quot;&gt;_float10,f_&lt;/span&gt;float25) values(123456,123456,123456);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_float(f_&lt;/span&gt;float,f&lt;span class=&quot;emphasis&quot;&gt;_float10,f_&lt;/span&gt;float25) values(1234567.89,12345.67,1234567.89);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; select * from tc_float;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----+----------+-----------+------------+------------+------------+-------------+--------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| fid | f_float  | f_float10 | f_float25  | f_float7_3 | f_float9_2 | f_float30_3 | f_decimal9_2 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----+----------+-----------+------------+------------+------------+-------------+--------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|   1 |   123456 |    123456 |     123456 | NULL       | NULL       | NULL        | NULL         |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;|   2 |  1234570 |   12345.7 | 1234567.89 | NULL       | NULL       | NULL        | NULL         |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----+----------+-----------+------------+------------+------------+-------------+--------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;ul&gt;
+&lt;li&gt;可以看到float与float(10)是没区别的，float默认能精确到6位有效数字&lt;/li&gt;
+&lt;/ul&gt;
+&lt;figure class=&quot;highlight asciidoc&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_float(f_&lt;/span&gt;float9&lt;span class=&quot;emphasis&quot;&gt;_2,f_&lt;/span&gt;decimal9&lt;span class=&quot;emphasis&quot;&gt;_2) values(123456.78,123456.78);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc_&lt;/span&gt;float(f&lt;span class=&quot;emphasis&quot;&gt;_float9_&lt;/span&gt;2,f&lt;span class=&quot;emphasis&quot;&gt;_decimal9_&lt;/span&gt;2) values(1234567.1,1234567.125);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 row affected, 1 warning (0.00 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; show warnings;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------+---------------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Level | Code | Message                                           |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------+---------------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Note  | 1265 | Data truncated for column &#39;f_decimal9_2&#39; at row 1 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------+---------------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 row in set (0.00 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; select * from tc_float;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----+----------+-----------+------------+------------+------------+-------------+--------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| fid | f_float  | f_float10 | f_float25  | f_float7_3 | f_float9_2 | f_float30_3 | f_decimal9_2 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----+----------+-----------+------------+------------+------------+-------------+--------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|   6 | NULL     | NULL      | NULL       | NULL       |  123456.78 | NULL        |    123456.78 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;|   9 | NULL     | NULL      | NULL       | NULL       | 1234567.12 | NULL        |   1234567.13 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-----+----------+-----------+------------+------------+------------+-------------+--------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_float(f_&lt;/span&gt;float7&lt;span class=&quot;emphasis&quot;&gt;_3) values(12345.1);&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;ERROR 1264 (22003): Out of range value for column &#39;f_&lt;/span&gt;float7&lt;span class=&quot;emphasis&quot;&gt;_3&#39; at row 1&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;ul&gt;
+&lt;li&gt;float(9,2)与decimal(9,2)是很像的，并没有前面提到24位一下6位有效数字的限制&lt;/li&gt;
+&lt;li&gt;他们俩之间的差别就在精度上，f_float9_2本应该是 1234567.10，结果小数点变成 .12 。f_decimal9_2因为标度为2，所以 .125 四舍五入成 .13&lt;/li&gt;
+&lt;li&gt;将 12345.1 插入f_float7_3列，因为转成标度3时 12345.100，整个位数大于7，所以 out of range 了 &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;另外在编程中应尽量避免做浮点数的比较，否则可能会导致一些潜在的问题。&lt;/p&gt;
+&lt;p&gt;坚决不允许使用float去存money，使用decimal更加稳妥，但使用decimal做除法依旧会产生浮点型，所以特殊情况请考虑使用整型，货币单位使用 分 ，或者除法在最后进行。&lt;/p&gt;
+&lt;h2 id=&quot;参考&quot;&gt;&lt;a href=&quot;#参考&quot; class=&quot;headerlink&quot; title=&quot;参考&quot;&gt;&lt;/a&gt;参考&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.path8.net/tn/archives/951&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL各数据类型的区别&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://dev.mysql.com/doc/refman/5.6/en/out-of-range-and-overflow.html&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL manual Out-of-Range and Overflow Handling&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.intechgrity.com/mysql-datatypes-working-with-fraction-and-decimal-dec/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL FLOAT vs DEC: working with fraction and decimal&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.noelherrick.com/blog/always-use-decimal-for-money&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;Never use floats for money&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;p&gt;本文链接地址：&lt;a href=&quot;http://seanlook.com/2016/04/29/mysql-numeric-int-float/&quot;&gt;http://seanlook.com/2016/04/29/mysql-numeric-int-float/&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;最近在准备给开发做一个mysql数据库开发规范方面培训，一步一步来，结合在生产环境发现的数据库方面的问题，从几个常用的数据类型说起。&lt;/p&gt;
+&lt;h2 id=&quot;int、tinyint与bigint&quot;&gt;&lt;a href=&quot;#int、tinyint与bigint&quot; class=&quot;headerlink&quot; title=&quot;int、tinyint与bigint&quot;&gt;&lt;/a&gt;int、tinyint与bigint&lt;/h2&gt;&lt;p&gt;它们都是（精确）整型数据类型，但是占用字节数和表达的范围不同。首先没有这个表就说不过去了：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Type&lt;/th&gt;
+&lt;th&gt;Storage&lt;/th&gt;
+&lt;th&gt;Minimum Value&lt;/th&gt;
+&lt;th&gt;Maximum Value&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;(Bytes)&lt;/td&gt;
+&lt;td&gt;(Signed/Unsigned)&lt;/td&gt;
+&lt;td&gt;(Signed/Unsigned)&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;TINYINT&lt;/td&gt;
+&lt;td&gt;1&lt;/td&gt;
+&lt;td&gt;-128&lt;/td&gt;
+&lt;td&gt;127&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;255&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;SMALLINT&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;td&gt;-32768&lt;/td&gt;
+&lt;td&gt;32767&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;65535&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;MEDIUMINT&lt;/td&gt;
+&lt;td&gt;3&lt;/td&gt;
+&lt;td&gt;-8388608&lt;/td&gt;
+&lt;td&gt;8388607&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;16777215&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;INT&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;td&gt;-2147483648&lt;/td&gt;
+&lt;td&gt;2147483647&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;4294967295&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;BIGINT&lt;/td&gt;
+&lt;td&gt;8&lt;/td&gt;
+&lt;td&gt;-9223372036854775808&lt;/td&gt;
+&lt;td&gt;9223372036854775807&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;td&gt;0&lt;/td&gt;
+&lt;td&gt;18446744073709551615&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;只需要知道对应类型占多少字节就能推算出范围了，比如int占 4 bytes,即4*8=32bits，大约10位数字，也能理解为什么int默认显示位数是11。&lt;/p&gt;
+&lt;p&gt;遇到比较多的是tinyint和bigint，tinyint一般用于存放status,type这种数值小的数据，不够用时可能会用smallint。bigint一般用于自增主键。&lt;/p&gt;
+&lt;p&gt;为了避免数据库被过度设计，布尔、枚举类型也采用tinyint。&lt;/p&gt;
+&lt;p&gt;还有一点也是经常被提到的关于 int(M) 中M的理解，int型数据无论是int(4)还是int(11)，都已经占用了 4 bytes 存储空间，M表示的只是显示宽度(display width, max value 255)，并不是定义int的长度。&lt;/p&gt;
+&lt;p&gt;例如：&lt;/p&gt;
+&lt;figure class=&quot;highlight gherkin&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; CREATE TABLE `tc_integer` (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_id` bigint(20) PRIMARY KEY AUTO_INCREMENT,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_type` tinyint,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_flag` tinyint(1),&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  `f_num` smallint(5) unsigned ZEROFILL&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;) ENGINE=InnoDB DEFAULT CHARSET=utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; desc tc_integer;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----------------+-------------------------------+------+-----+---------+----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; Field          &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Type                          &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Null &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Key &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Default &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; Extra          &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----------------+-------------------------------+------+-----+---------+----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_id           &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; bigint(20)                    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NO   &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; PRI &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; auto_increment &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_type         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; tinyint(4)                    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; YES  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;     &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;                &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_flag         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; tinyint(1)                    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; YES  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;     &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;                &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; f_num          &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; smallint(5) unsigned zerofill &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; YES  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;     &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; NULL    &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt;                &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----------------+-------------------------------+------+-----+---------+----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4 rows in set (0.01 sec)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;插入几条数据看一下：&lt;br&gt;
+    
+    </summary>
+    
+      <category term="MySQL" scheme="http://seanlook.com/categories/MySQL/"/>
+    
+    
+      <category term="mysql" scheme="http://seanlook.com/tags/mysql/"/>
+    
+      <category term="schema设计" scheme="http://seanlook.com/tags/schema%E8%AE%BE%E8%AE%A1/"/>
+    
+  </entry>
+  
+  <entry>
+    <title>MySQL字符数据类型char与varchar的区别</title>
+    <link href="http://seanlook.com/2016/04/28/mysql-char-varchar-set/"/>
+    <id>http://seanlook.com/2016/04/28/mysql-char-varchar-set/</id>
+    <published>2016-04-28T08:32:49.000Z</published>
+    <updated>2016-04-28T08:32:49.000Z</updated>
+    
+    <content type="html">&lt;p&gt;数据类型差不多是接触mysql一开始就了解的内容，最近遇到几个现象如varchar自动转mediumtext，blob存储性能的问题，不得不回头明确一下关于MySQL常用数据类型的选择。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://dev.mysql.com/doc/refman/5.6/en/char.html&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;mysql手册这里&lt;/a&gt; 已经讲的很清楚了。它们都是定义字符串型字段时常用的类型，但它们存储和检索的方式有不同，最大长度和尾部的空格是否保留也有差别。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;char&lt;/code&gt;类型是使用固定长度空间进行存储，范围0-255。比如&lt;code&gt;CHAR(30)&lt;/code&gt;能放30个字节，存放abcd时，尾部会以空格补齐，实际占用空间 30bytes 。检索它的时候尾部空格会被去除。&lt;/p&gt;
+&lt;p&gt;char善于存储经常改变的值，或者长度相对固定的值，比如type、ip地址或md5之类的数据，不容易产生碎片。关于它的效率可以参考&lt;a href=&quot;http://bbs.chinaunix.net/thread-1696053-1-1.html&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;这里&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;varchar&lt;/code&gt;类型保存可变长度字符串，范围0-65535（但受到单行最大64kb的限制）。比如用&lt;code&gt;varchar(30)&lt;/code&gt;去存放abcd，实际使用5个字节，因为还需要使用额外1个字节来标识字串长度（0-255使用1个字节，超过255需要2个字节）。&lt;/p&gt;
+&lt;p&gt;varchar善于存储值的长短不一的列，也是用的最多的一种类型，节省磁盘空间。update时varchar列时，如果新数据比原数据大，数据库需要重新开辟空间，这一点会有性能略有损耗，但innodb引擎下查询效率比char高一点。这也是innodb官方推荐的类型。&lt;/p&gt;
+&lt;p&gt;如果存储时真实长度超过了char或者varchar定义的最大长度呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在SQL严格模式下，无论char还是varchar，如果尾部要被截断的是非空格，会提示错误，即插入失败&lt;/li&gt;
+&lt;li&gt;在SQL非严格模式下，无论char还是varchar，如果尾部要被截断的是非空格，会提示warning，但可以成功&lt;/li&gt;
+&lt;li&gt;如果尾部要被截断的是空格，无论SQL所处模式，varchar都可以插入成功但提示warning；char也可以插入成功，并且无任何提示&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里特意提到SQL的严格模式，是因为在工作中也遇到过一些坑，参考&lt;a href=&quot;&quot;&gt;MySQL的sql_mode严格模式注意点&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;贴上官方的一个表格：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Value&lt;/th&gt;
+&lt;th&gt;CHAR(4)&lt;/th&gt;
+&lt;th&gt;Storage Required&lt;/th&gt;
+&lt;th&gt;VARCHAR(4)&lt;/th&gt;
+&lt;th&gt;Storage Required&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;‘’&lt;/td&gt;
+&lt;td&gt;‘    ‘&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘’&lt;/td&gt;
+&lt;td&gt;1 byte&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;‘ab’&lt;/td&gt;
+&lt;td&gt;‘ab  ‘&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘ab’&lt;/td&gt;
+&lt;td&gt;3 bytes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;5 bytes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;‘abcdefgh’&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;5 bytes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;另外，mysql字段值比较时默认是不区分大小写的，这是由于他们的校对规则（一般是 utf8_general_ci）决定的，按字符比较，所以查询时 值尾部 的空格也是被忽略的，除非建表时对列指定 &lt;code&gt;BINARY&lt;/code&gt; （校对字符集变成utf8_bin）或者&lt;code&gt;select * from vc where binary v=&amp;#39;ab  &amp;#39;;&lt;/code&gt;，就会按字节比较，即比较时区分大小写和尾部空格。&lt;/p&gt;
+&lt;p&gt;需要注意的是，使用varchar不能因为长度可变就随意分大空间，比如90个字节能放够的列定义成varchar(200)，因为开辟内存时是以200字节进行的，遇到需要filesort或tmp table作业可能会带来不利影响。&lt;/p&gt;
+&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
+&lt;p&gt;最后研究一下字符集对存储长度影响，以 &lt;code&gt;create table tc_utf8(c1 int primary key auto_increment, c2 char(30), c3 varchar(N)) charset=utf8;&lt;/code&gt; 为例：&lt;/p&gt;
+&lt;p&gt;字符集为utf8，于是中文每个字符占3个字节，英文还是1个字节，所以N最大为 (65535-1-2-4-30&lt;em&gt;3)/3 = 21812，即最多能存放21812个英文、数字、汉字。其中65535是单行最大限制，减1是NULL标识位，减2的是头部的2个字节标识长度，减30&lt;/em&gt;3的原因是char(30)占用90个字节，最后除以3还是因为utf8最长用3个字节表示一个字符。&lt;/p&gt;
+&lt;p&gt;但有人会说，utf8的英文字符只需要1个字节表示，并不占用3个字节，在存ASCII字符的情况下N是不是可以更大呢。答案是否定的，因为定义表的时候mysql事先并不知道c3要存的是英文还在中文，只能以最大来计。mysql也是以这种方式来确保行最大65535bytes限制：数据行只要出现一个ascii字符（如英文字母、数字），就永远达不到65535，数据行全中文则刚好满。&lt;/p&gt;
+&lt;p&gt;还有一种特殊情况：&lt;/p&gt;
+&lt;figure class=&quot;highlight asciidoc&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;29&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;30&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;31&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;32&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;33&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;34&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;35&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;36&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;37&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;38&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;39&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; show variables like &quot;char%&quot;;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+--------------------------+----------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Variable_name            | Value                      |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+--------------------------+----------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;client     | utf8                       |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;connection | utf8                       |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;database   | utf8                       |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;filesystem | binary                     |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;results    | utf8                       |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;server     | latin1                     |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| character&lt;span class=&quot;emphasis&quot;&gt;_set_&lt;/span&gt;system     | utf8                       |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| character_sets_dir       | /usr/share/mysql/charsets/ |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+--------------------------+----------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8 rows in set (0.12 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; select @@sql_mode;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| @@sql_mode             |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| NO_ENGINE_SUBSTITUTION |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 rows in set (0.13 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; create table tc&lt;span class=&quot;emphasis&quot;&gt;_utf8_&lt;/span&gt;21812(c1 int primary key auto&lt;span class=&quot;emphasis&quot;&gt;_increment, c2 char(30), c3 varchar(21812)) charset=utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 0 rows affected (0.10 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;mysql&amp;gt; create table tc&lt;span class=&quot;emphasis&quot;&gt;_utf8_&lt;/span&gt;21813(c1 int primary key auto&lt;span class=&quot;emphasis&quot;&gt;_increment, c2 char(30), c3 varchar(21845)) charset=utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Row size too large. The maximum row size for the used table type, not counting BLOBs, is 65535. This includes storage overhead, check the manual. You have to change some columns to TEXT or BLOBs&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;mysql&amp;gt; create table tc&lt;span class=&quot;emphasis&quot;&gt;_utf8_&lt;/span&gt;21846(c1 int primary key auto&lt;span class=&quot;emphasis&quot;&gt;_increment, c2 char(30), c3 varchar(21846)) charset=utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 0 rows affected, 1 warnings (0.10 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; show warnings;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------+---------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Level | Code | Message                                     |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------+---------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Note  | 1246 | Converting column &#39;c3&#39; from VARCHAR to TEXT |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------+---------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 rows in set (0.14 sec)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;即在非严格模式下，因为N=21813 &amp;gt; 21812，所以报 Row size too large 错误。但N=21846 &amp;gt; (65535/3)时，只是出现warnings，varchar自动变成了mediumtext 类型。&lt;/p&gt;
+&lt;p&gt;细心的朋友可能注意到上面开始我看了一下字符集 &lt;code&gt;show variabels like &amp;quot;char%&amp;quot;;&lt;/code&gt;，因为接下来要说明另外一个问题：客户端字符集与database不一样的情况。&lt;/p&gt;
+&lt;p&gt;我们回到 N&amp;lt;=21812 的正常情况：&lt;/p&gt;
+&lt;figure class=&quot;highlight sql&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;CREATE&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;TABLE&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;`tc_utf8`&lt;/span&gt; (&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  &lt;span class=&quot;string&quot;&gt;`c1`&lt;/span&gt; &lt;span class=&quot;built_in&quot;&gt;int&lt;/span&gt;(&lt;span class=&quot;number&quot;&gt;11&lt;/span&gt;) &lt;span class=&quot;keyword&quot;&gt;NOT&lt;/span&gt; &lt;span class=&quot;literal&quot;&gt;NULL&lt;/span&gt; AUTO_INCREMENT,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  &lt;span class=&quot;string&quot;&gt;`c2`&lt;/span&gt; &lt;span class=&quot;built_in&quot;&gt;char&lt;/span&gt;(&lt;span class=&quot;number&quot;&gt;30&lt;/span&gt;) &lt;span class=&quot;keyword&quot;&gt;DEFAULT&lt;/span&gt; &lt;span class=&quot;literal&quot;&gt;NULL&lt;/span&gt;,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  &lt;span class=&quot;string&quot;&gt;`c3`&lt;/span&gt; &lt;span class=&quot;built_in&quot;&gt;varchar&lt;/span&gt;(&lt;span class=&quot;number&quot;&gt;30&lt;/span&gt;) &lt;span class=&quot;keyword&quot;&gt;DEFAULT&lt;/span&gt; &lt;span class=&quot;literal&quot;&gt;NULL&lt;/span&gt;,&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;  PRIMARY &lt;span class=&quot;keyword&quot;&gt;KEY&lt;/span&gt; (&lt;span class=&quot;string&quot;&gt;`c1`&lt;/span&gt;)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;) &lt;span class=&quot;keyword&quot;&gt;ENGINE&lt;/span&gt;=&lt;span class=&quot;keyword&quot;&gt;InnoDB&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;DEFAULT&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;CHARSET&lt;/span&gt;=utf8;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;插入一些数据：&lt;/p&gt;
+&lt;figure class=&quot;highlight asciidoc&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;24&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;25&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;26&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;27&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;28&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;29&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;30&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;31&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;32&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;33&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; set names utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;en_&lt;/span&gt;30&#39;,repeat(&lt;span class=&quot;emphasis&quot;&gt;&#39;a&#39;&lt;/span&gt;,30));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected (17.87 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;en_&lt;/span&gt;31&#39;,repeat(&lt;span class=&quot;emphasis&quot;&gt;&#39;b&#39;&lt;/span&gt;,31));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected, 1 warnings (0.10 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; show warnings;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Level   | Code | Message                                 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Warning | 1265 | Data truncated for column &#39;c3&#39; at row 1 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 rows in set (0.14 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;zh_&lt;/span&gt;30&#39;,repeat(&lt;span class=&quot;emphasis&quot;&gt;&#39;中&#39;&lt;/span&gt;,30));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected (0.18 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;zh_&lt;/span&gt;31&#39;,repeat(&lt;span class=&quot;emphasis&quot;&gt;&#39;文&#39;&lt;/span&gt;,31));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected, 1 warnings (0.09 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;意料之中，汉字同样被截断&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;ysql&amp;gt; select c2,c3,length(c3),char_length(c3) from tc_utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------------+-----------------+------------------------------------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| c2    | length(c3) | char_length(c3) | c3                                                                     |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+-------+------------+-----------------+------------------------------------------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| en&lt;span class=&quot;emphasis&quot;&gt;_30 |         30 |              30 | aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa                                         |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| en_&lt;/span&gt;31 |         30 |              30 | bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb                                         |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| zh&lt;span class=&quot;emphasis&quot;&gt;_30 |         90 |              30 | 中中中中中中中中中中中中中中中中中中中中中中中中中中中中中中 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;| zh_&lt;/span&gt;31 |         90 |              30 | 文文文文文文文文文文文文文文文文文文文文文文文文文文文文文文 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;code&quot;&gt;+-------+&lt;/span&gt;------------&lt;span class=&quot;code&quot;&gt;+-----------------+&lt;/span&gt;------------------------------------------------------------------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4 rows in set (0.00 sec)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;上面的en_30代表insert的时候存入&lt;em&gt;30&lt;/em&gt;个&lt;em&gt;英文&lt;/em&gt;字符。可以看到30个a占用30个字节，30个汉字占用90个字节，大于30的会被截断，证实了文章一开头的说法。&lt;/p&gt;
+&lt;figure class=&quot;highlight asciidoc&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;15&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;16&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;17&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;18&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;19&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;20&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;21&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;22&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;23&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; set names latin1;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;zh_&lt;/span&gt;30&lt;span class=&quot;emphasis&quot;&gt;_latin1&#39;,repeat(&#39;中&#39;,30));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected, 1 warnings (0.10 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;span class=&quot;section&quot;&gt;mysql&amp;gt; show warnings;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Level   | Code | Message                                 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;section&quot;&gt;| Warning | 1265 | Data truncated for column &#39;c3&#39; at row 1 |&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+---------+------+-----------------------------------------+&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;1 rows in set (0.14 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;zh_&lt;/span&gt;10&lt;span class=&quot;emphasis&quot;&gt;_latin1&#39;,repeat(&#39;中&#39;,10));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected (0.10 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;zh_&lt;/span&gt;10&lt;span class=&quot;emphasis&quot;&gt;_latin1&#39;,repeat(&#39;文&#39;,10));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected (0.11 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;mysql&amp;gt; insert into tc&lt;span class=&quot;emphasis&quot;&gt;_utf8(c2,c3) values(&#39;zh_&lt;/span&gt;11&lt;span class=&quot;emphasis&quot;&gt;_latin1&#39;,repeat(&#39;文&#39;,11));&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;Query OK, 1 rows affected, 1 warnings (0.12 sec)&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;/span&gt;截断&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;上面的实验显示，db table是utf8，但客户端连接时使用latin1，在非严格模式下 varchar(30) &lt;strong&gt;只能存10&lt;/strong&gt;个汉字，多余的尾部被截断了&lt;/p&gt;
+&lt;p&gt;我们来看一下占用字节的情况：（2,3行的乱码是意料之中的）&lt;/p&gt;
+&lt;figure class=&quot;highlight gherkin&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;9&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;10&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;11&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;12&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;13&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;14&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mysql&amp;gt; select c1,c2,c3,length(c3),char_length(c3) from tc_utf8;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----+--------------+--------------------------------+------------+-----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; c1 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; c2           &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; c3                             &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; length(c3) &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; char_length(c3) &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----+--------------+--------------------------------+------------+-----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 1  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; en_30        &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 2  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; en_31        &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; bbbbbbbbbbbbbbbbbbbbbbbbbbbbbb &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 3  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; zh_30        &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; ?????????????????????????????? &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 90         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 4  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; zh_31        &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; ?????????????????????????????? &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 90         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 5  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; zh_30_latin1 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 中中中中中中中中中中 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 60         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 6  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; zh_10_latin1 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 中中中中中中中中中中 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 60         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 7  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; zh_10_latin1 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 文文文文文文文文文文 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 80         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;|&lt;span class=&quot;string&quot;&gt; 9  &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; zh_11_latin1 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 文文文文文文文文文文 &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 80         &lt;/span&gt;|&lt;span class=&quot;string&quot;&gt; 30              &lt;/span&gt;|&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;+----+--------------+--------------------------------+------------+-----------------+&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8 rows in set (0.14 sec)&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
+&lt;p&gt;看到char_length函数算出的中、英文字符个数都是30，但一个“中”占6字节，一个“文”占8字节，是不是很诧异，这中间有数次的编码转换过程，有兴趣 可以参考 &lt;a href=&quot;http://mysql.rjweb.org/doc.php/charcoll&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://mysql.rjweb.org/doc.php/charcoll&lt;/a&gt; ，是可以模拟出来的。&lt;/p&gt;
+&lt;p&gt;在严格模式下就没这么复杂了，所以尽量使用 STRICT_TRANS_TABLES ，避免意外的情况带入生产环境。早期设计的时候就要保持客户端与数据库字符集一致。&lt;/p&gt;
+&lt;h2 id=&quot;参考&quot;&gt;&lt;a href=&quot;#参考&quot; class=&quot;headerlink&quot; title=&quot;参考&quot;&gt;&lt;/a&gt;参考&lt;/h2&gt;&lt;ul&gt;
+&lt;li&gt;&lt;a href=&quot;http://dev.mysql.com/doc/refman/5.7/en/char.html&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL manual:The CHAR and VARCHAR Types&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://get.ftqq.com/723.get&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL字符集指南–进阶篇V0.7&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://mysql.rjweb.org/doc.php/charcoll&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL字符集与校对规则&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://www.mysqltutorial.org/mysql-string-length/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;MySQL String Length&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href=&quot;http://sunny90.com/a/database/2014/0819/24.html&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://sunny90.com/a/database/2014/0819/24.html&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;hr&gt;
+&lt;p&gt;本文链接地址：&lt;a href=&quot;http://seanlook.com/2016/04/28/mysql-char-varchar-set/&quot;&gt;http://seanlook.com/2016/04/28/mysql-char-varchar-set/&lt;/a&gt;&lt;/p&gt;
+&lt;hr&gt;
+</content>
+    
+    <summary type="html">
+    
+      &lt;p&gt;数据类型差不多是接触mysql一开始就了解的内容，最近遇到几个现象如varchar自动转mediumtext，blob存储性能的问题，不得不回头明确一下关于MySQL常用数据类型的选择。&lt;/p&gt;
+&lt;p&gt;&lt;a href=&quot;http://dev.mysql.com/doc/refman/5.6/en/char.html&quot;&gt;mysql手册这里&lt;/a&gt; 已经讲的很清楚了。它们都是定义字符串型字段时常用的类型，但它们存储和检索的方式有不同，最大长度和尾部的空格是否保留也有差别。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;char&lt;/code&gt;类型是使用固定长度空间进行存储，范围0-255。比如&lt;code&gt;CHAR(30)&lt;/code&gt;能放30个字节，存放abcd时，尾部会以空格补齐，实际占用空间 30bytes 。检索它的时候尾部空格会被去除。&lt;/p&gt;
+&lt;p&gt;char善于存储经常改变的值，或者长度相对固定的值，比如type、ip地址或md5之类的数据，不容易产生碎片。关于它的效率可以参考&lt;a href=&quot;http://bbs.chinaunix.net/thread-1696053-1-1.html&quot;&gt;这里&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;varchar&lt;/code&gt;类型保存可变长度字符串，范围0-65535（但受到单行最大64kb的限制）。比如用&lt;code&gt;varchar(30)&lt;/code&gt;去存放abcd，实际使用5个字节，因为还需要使用额外1个字节来标识字串长度（0-255使用1个字节，超过255需要2个字节）。&lt;/p&gt;
+&lt;p&gt;varchar善于存储值的长短不一的列，也是用的最多的一种类型，节省磁盘空间。update时varchar列时，如果新数据比原数据大，数据库需要重新开辟空间，这一点会有性能略有损耗，但innodb引擎下查询效率比char高一点。这也是innodb官方推荐的类型。&lt;/p&gt;
+&lt;p&gt;如果存储时真实长度超过了char或者varchar定义的最大长度呢？&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;在SQL严格模式下，无论char还是varchar，如果尾部要被截断的是非空格，会提示错误，即插入失败&lt;/li&gt;
+&lt;li&gt;在SQL非严格模式下，无论char还是varchar，如果尾部要被截断的是非空格，会提示warning，但可以成功&lt;/li&gt;
+&lt;li&gt;如果尾部要被截断的是空格，无论SQL所处模式，varchar都可以插入成功但提示warning；char也可以插入成功，并且无任何提示&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;这里特意提到SQL的严格模式，是因为在工作中也遇到过一些坑，参考&lt;a href=&quot;&quot;&gt;MySQL的sql_mode严格模式注意点&lt;/a&gt;。&lt;/p&gt;
+&lt;p&gt;贴上官方的一个表格：&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Value&lt;/th&gt;
+&lt;th&gt;CHAR(4)&lt;/th&gt;
+&lt;th&gt;Storage Required&lt;/th&gt;
+&lt;th&gt;VARCHAR(4)&lt;/th&gt;
+&lt;th&gt;Storage Required&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;‘’&lt;/td&gt;
+&lt;td&gt;‘    ‘&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘’&lt;/td&gt;
+&lt;td&gt;1 byte&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;‘ab’&lt;/td&gt;
+&lt;td&gt;‘ab  ‘&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘ab’&lt;/td&gt;
+&lt;td&gt;3 bytes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;5 bytes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;‘abcdefgh’&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;4 bytes&lt;/td&gt;
+&lt;td&gt;‘abcd’&lt;/td&gt;
+&lt;td&gt;5 bytes&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;另外，mysql字段值比较时默认是不区分大小写的，这是由于他们的校对规则（一般是 utf8_general_ci）决定的，按字符比较，所以查询时 值尾部 的空格也是被忽略的，除非建表时对列指定 &lt;code&gt;BINARY&lt;/code&gt; （校对字符集变成utf8_bin）或者&lt;code&gt;select * from vc where binary v=&amp;#39;ab  &amp;#39;;&lt;/code&gt;，就会按字节比较，即比较时区分大小写和尾部空格。&lt;/p&gt;
+&lt;p&gt;需要注意的是，使用varchar不能因为长度可变就随意分大空间，比如90个字节能放够的列定义成varchar(200)，因为开辟内存时是以200字节进行的，遇到需要filesort或tmp table作业可能会带来不利影响。&lt;/p&gt;
+    
+    </summary>
+    
+      <category term="MySQL" scheme="http://seanlook.com/categories/MySQL/"/>
+    
+    
+      <category term="mysql" scheme="http://seanlook.com/tags/mysql/"/>
+    
+      <category term="schema设计" scheme="http://seanlook.com/tags/schema%E8%AE%BE%E8%AE%A1/"/>
+    
+  </entry>
   
   <entry>
     <title>使用sysbench对mysql压力测试</title>
@@ -1721,181 +2458,6 @@ mysql&amp;gt; show slave status\G
       <category term="inotify" scheme="http://seanlook.com/tags/inotify/"/>
     
       <category term="lsyncd，文件同步" scheme="http://seanlook.com/tags/lsyncd%EF%BC%8C%E6%96%87%E4%BB%B6%E5%90%8C%E6%AD%A5/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>五一回来了</title>
-    <link href="http://seanlook.com/2015/05/03/feel-wuyi-back/"/>
-    <id>http://seanlook.com/2015/05/03/feel-wuyi-back/</id>
-    <published>2015-05-02T23:01:25.000Z</published>
-    <updated>2015-05-03T16:01:25.000Z</updated>
-    
-    <content type="html">&lt;p&gt;———————— 只是无聊，轻松的写点东西，在 LOFTER上是不需要写标题的&lt;/p&gt;
-&lt;p&gt;失算了，下午四点到了汽车站，没能买到16:10的汽车，最早也要晚上六点到深圳侨社那班。这原本打算七点就可到深圳，淡定的去会展中心吃个饭啥的，说话算数太不好意思了。&lt;/p&gt;
-&lt;p&gt;两个小时的等车时间真够无聊的，比在哥哥家里兼工作室要好些。这两天说过来玩，其实也是带任务来的——为哥哥的天猫手表店拍实物图片，借我的MAC一用做背景。我问他卡斯曼、卡西欧官方没给你宝贝图片吗，他说不是，是想拍出自己的特色放在介绍里。千篇一律大家都去旗舰店买了，谁来照顾我们的手表店。想想也是，现在都讲究情怀！看到房间里单反、灯光箱、360度转动盘（不晓得是个什么gui），我几百块的小叶紫檀貔貅手串都派上用场了。看到用心到连饭都没时间煮的份上，我要不要帮忙推广一下呢。&lt;/p&gt;
-&lt;p&gt;本来打算是今天早点回深圳，可听他说下午还有几块手表要拍，大概要2个小时，我又怎么能无耻的坚持带走电脑呢。临走的时候，哥跟我在qq上说了一句“大老远让你从深圳跑中山来，也没弄点好吃的（也没带你去珠海玩——自己脑补的），太忙太赶了”。八月份再过来，那时候丽景名筑的房子也装修好了，开个入住仪式。昨天也去新房子看了一眼，线路已经全部埋好了，正在给洗手间做防水测试，厅中间还是一堆沙子，只有天花板刷好了乳石灰。六月份能够装修完成，八月份入住，想想那个时候过去，大飘窗、高低儿童床、乐视tv，比现在这个出租屋要好的多了去。可是，可是，这意味着一个很大的问题，哥哥收入用于装修屋子（简单八万的样子），家里在建的四层楼房怎么办？ 昨天跟家里视频，老爸正在算这一笔账，告诉我个数字，30-40万，毛坯房。现在在农村修个房子（四层可以俯瞰全村了）的成本，差不多可以在中小城市买一个90平的。老一辈人还是希望待在家里吧。鸭梨好大，只能这么形容了。&lt;/p&gt;
-&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
-&lt;p&gt;终于上车了，迅速占领了一个排前靠窗的位置坐了下来，正准备戴上耳机听听音乐，一个50来岁的中年人来到旁边坐了下来，他太太坐斜对面靠近走廊。然后问我说几号座位，我坐了他位置，原本他跟他太太一起坐。于是我就说现在不都没按位置坐吗，正跟他讨论如果真有人计较这个时，让就让呗，有个年青人人过来指着大叔的位置说这是他位置。好吧既然有人认真了，我就收一收我这“乡下来”的不按座位乘车的土鳖气息，但大叔为什么要骗我他跟他太太是一起的邻座。算了，小事不提，滚到了最后一排48号，还好不是正中间走廊的位置，不然一个急刹车就该跟司机say hi了。&lt;/p&gt;
-&lt;p&gt;不确定到深圳的时间，很抱歉。再写眼睛就花了。ps:刚才汽车颠的一下我敢说飞出了一米高。&lt;/p&gt;
-&lt;p&gt;——零点更新&lt;/p&gt;
-&lt;p&gt;等车2个小时不说，路上竟然堵车，虎门大桥原本20分钟的路程竟然走了一个多小时，到晚上将近十点才落车，下车的地方也真特么偏僻，来回半天都没见着竹子林地铁站，果断叫了个的士，到深大地铁站转地铁。法克，那司机竟给绕，原本走深南大道起步价的路程，省省的开到30块，差评投诉！连翻不顺！洗洗睡。&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;———————— 只是无聊，轻松的写点东西，在 LOFTER上是不需要写标题的&lt;/p&gt;
-&lt;p&gt;失算了，下午四点到了汽车站，没能买到16:10的汽车，最早也要晚上六点到深圳侨社那班。这原本打算七点就可到深圳，淡定的去会展中心吃个饭啥的，说话算数太不好意思了。&lt;/p&gt;
-&lt;p&gt;两个小时的等车时间真够无聊的，比在哥哥家里兼工作室要好些。这两天说过来玩，其实也是带任务来的——为哥哥的天猫手表店拍实物图片，借我的MAC一用做背景。我问他卡斯曼、卡西欧官方没给你宝贝图片吗，他说不是，是想拍出自己的特色放在介绍里。千篇一律大家都去旗舰店买了，谁来照顾我们的手表店。想想也是，现在都讲究情怀！看到房间里单反、灯光箱、360度转动盘（不晓得是个什么gui），我几百块的小叶紫檀貔貅手串都派上用场了。看到用心到连饭都没时间煮的份上，我要不要帮忙推广一下呢。&lt;/p&gt;
-&lt;p&gt;本来打算是今天早点回深圳，可听他说下午还有几块手表要拍，大概要2个小时，我又怎么能无耻的坚持带走电脑呢。临走的时候，哥跟我在qq上说了一句“大老远让你从深圳跑中山来，也没弄点好吃的（也没带你去珠海玩——自己脑补的），太忙太赶了”。八月份再过来，那时候丽景名筑的房子也装修好了，开个入住仪式。昨天也去新房子看了一眼，线路已经全部埋好了，正在给洗手间做防水测试，厅中间还是一堆沙子，只有天花板刷好了乳石灰。六月份能够装修完成，八月份入住，想想那个时候过去，大飘窗、高低儿童床、乐视tv，比现在这个出租屋要好的多了去。可是，可是，这意味着一个很大的问题，哥哥收入用于装修屋子（简单八万的样子），家里在建的四层楼房怎么办？ 昨天跟家里视频，老爸正在算这一笔账，告诉我个数字，30-40万，毛坯房。现在在农村修个房子（四层可以俯瞰全村了）的成本，差不多可以在中小城市买一个90平的。老一辈人还是希望待在家里吧。鸭梨好大，只能这么形容了。&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="Feel" scheme="http://seanlook.com/categories/Feel/"/>
-    
-    
-      <category term="feelings" scheme="http://seanlook.com/tags/feelings/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>五一去哪儿</title>
-    <link href="http://seanlook.com/2015/05/01/feel-wuyi-go/"/>
-    <id>http://seanlook.com/2015/05/01/feel-wuyi-go/</id>
-    <published>2015-05-01T03:01:25.000Z</published>
-    <updated>2015-05-01T03:01:25.000Z</updated>
-    
-    <content type="html">&lt;p&gt;五一去哪儿，我实在想不到更俗的标题了。去中山。说实在真不想去，我哥非要我带Mac回去让他拍照，给手表做陪衬。ps: 汽车就七个人，车厢也特么烂了，晃晃感觉要散了😳&lt;/p&gt;
-&lt;p&gt;反正车上无聊，随便说说什么吧！昨晚，嗯，应该是失眠了。第二天睡到下午起来，窝在家里没事做（早知道就不那么快把《权利的游戏》看完了），五点的时候我竟然跑去公司加班了！&lt;/p&gt;
-&lt;p&gt;加班也没做啥事，帮另一个同事调通了一个网络，然后在自己博客上更新了篇文章。赖到将近晚上八点半才走，本想在猫眼买张西乡天虹『左耳』的电影票，但没位置，想到一天没怎么吃饭（在公司吃了几包肉松饼和华夫饼干），在家门口沃尔玛楼下的爱尚堡点了份豪华午餐，坐了半个多小时起身才回去。晚上走在小区了，总有股淡淡的花香，却从来说不出名字，风吹的头发飘起，真的不是一般爽呢。但因为已经有十点多了，还是加快步伐推开了乌漆抹黑的家门，另外两个室友，一个回宜昌老家参加哥哥婚礼去了，一个去了阴盛阳衰的川大同学会。&lt;/p&gt;
-&lt;p&gt;虽然今天还要赶车，但早睡这种事情很少发生在我身上。于是打开了电视，体育频道一个人没啥看的，央视一台播放什么劳动光荣的纪录片，五分钟换台了，想想还是去看宣传了很久的芒果台『真正男子汉』。额，杜海涛给我们的笑星形象永远不那么容易消失，这是节目，但也是在军队里，看着他总觉特意的去达到一种节目效果，他来部队参加训练是减肥。王宝强，真是个逗比，在教官检查违禁物品时宝宝那种呆萌老土的模样，笑抽了我，而且在后面打靶时的表现，蛮喜欢他的，他来部队是为了还原『士兵突击』里的许三多形象，想做一名真正的战士，这让我想到了不久前看过吴京的战狼，几次有一种每人都应该去参军的经历。我有个表弟（表哥？），就在去年过年时还跟我一起睡过，五年当兵回来，看他手持真枪的照片，威风凛凛。刘昊然，17岁，想在军队里完成他的成人礼，这名演员以后必火。袁弘，教官说他是一匹还没被驯服的野马，有血性，真男人。郭晓东，40岁的人，有过当兵的经历，可是带病参训，老婆不错😱。张丰毅，将近60岁的人，看过他不少电影，不是折腾，是表率。&lt;/p&gt;
-&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
-&lt;p&gt;看完已经零点半了，什么，明天（5.2）去中山的东西还没收拾，可怕的拖延症。然后就是下了『澳门风云2』『天将雄狮』在手机上打发车上的时间，给充电宝充电、收拾衣服什么的。到了两点多，躺在床上却睡不着觉，空调开着第二天就闹肚子，不开又微热。眼睛眯着眯着，突然有个想法或想说什么，就打开笔记就记录了下来，好奇怪。其中有一个就是突然有个做APP的点子，想法不错，五一假后再查查资料。&lt;/p&gt;
-&lt;p&gt;现在汽车正在路上飞驰，也坐满了人，旁边那个人的肉能不能不要碰我。就这样，再写下去手机电量怕是不足以支撑一部电影了。&lt;/p&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;五一去哪儿，我实在想不到更俗的标题了。去中山。说实在真不想去，我哥非要我带Mac回去让他拍照，给手表做陪衬。ps: 汽车就七个人，车厢也特么烂了，晃晃感觉要散了😳&lt;/p&gt;
-&lt;p&gt;反正车上无聊，随便说说什么吧！昨晚，嗯，应该是失眠了。第二天睡到下午起来，窝在家里没事做（早知道就不那么快把《权利的游戏》看完了），五点的时候我竟然跑去公司加班了！&lt;/p&gt;
-&lt;p&gt;加班也没做啥事，帮另一个同事调通了一个网络，然后在自己博客上更新了篇文章。赖到将近晚上八点半才走，本想在猫眼买张西乡天虹『左耳』的电影票，但没位置，想到一天没怎么吃饭（在公司吃了几包肉松饼和华夫饼干），在家门口沃尔玛楼下的爱尚堡点了份豪华午餐，坐了半个多小时起身才回去。晚上走在小区了，总有股淡淡的花香，却从来说不出名字，风吹的头发飘起，真的不是一般爽呢。但因为已经有十点多了，还是加快步伐推开了乌漆抹黑的家门，另外两个室友，一个回宜昌老家参加哥哥婚礼去了，一个去了阴盛阳衰的川大同学会。&lt;/p&gt;
-&lt;p&gt;虽然今天还要赶车，但早睡这种事情很少发生在我身上。于是打开了电视，体育频道一个人没啥看的，央视一台播放什么劳动光荣的纪录片，五分钟换台了，想想还是去看宣传了很久的芒果台『真正男子汉』。额，杜海涛给我们的笑星形象永远不那么容易消失，这是节目，但也是在军队里，看着他总觉特意的去达到一种节目效果，他来部队参加训练是减肥。王宝强，真是个逗比，在教官检查违禁物品时宝宝那种呆萌老土的模样，笑抽了我，而且在后面打靶时的表现，蛮喜欢他的，他来部队是为了还原『士兵突击』里的许三多形象，想做一名真正的战士，这让我想到了不久前看过吴京的战狼，几次有一种每人都应该去参军的经历。我有个表弟（表哥？），就在去年过年时还跟我一起睡过，五年当兵回来，看他手持真枪的照片，威风凛凛。刘昊然，17岁，想在军队里完成他的成人礼，这名演员以后必火。袁弘，教官说他是一匹还没被驯服的野马，有血性，真男人。郭晓东，40岁的人，有过当兵的经历，可是带病参训，老婆不错😱。张丰毅，将近60岁的人，看过他不少电影，不是折腾，是表率。&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="Feel" scheme="http://seanlook.com/categories/Feel/"/>
-    
-    
-      <category term="feelings" scheme="http://seanlook.com/tags/feelings/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>iscsi网络存储介绍及客户端配置操作</title>
-    <link href="http://seanlook.com/2015/04/28/iscsi-san-initiator/"/>
-    <id>http://seanlook.com/2015/04/28/iscsi-san-initiator/</id>
-    <published>2015-04-27T17:21:25.000Z</published>
-    <updated>2015-04-29T02:46:23.000Z</updated>
-    
-    <content type="html">&lt;p&gt;本文不介绍iSCSI服务端的搭建过程，不然就会很累赘。主题就是怎么去完成iscsi网络存储的挂载过程，并顺带介绍一些必要的概念。&lt;/p&gt;
-&lt;h1 id=&quot;1-iscsi介绍与initiator安装&quot;&gt;&lt;a href=&quot;#1-iscsi介绍与initiator安装&quot; class=&quot;headerlink&quot; title=&quot;1. iscsi介绍与initiator安装&quot;&gt;&lt;/a&gt;1. iscsi介绍与initiator安装&lt;/h1&gt;&lt;h2 id=&quot;1-1-iSCSI介绍&quot;&gt;&lt;a href=&quot;#1-1-iSCSI介绍&quot; class=&quot;headerlink&quot; title=&quot;1.1 iSCSI介绍&quot;&gt;&lt;/a&gt;1.1 iSCSI介绍&lt;/h2&gt;&lt;p&gt;iSCSI简单来说，就是把SCSI指令通过TCP/IP协议封装起来，在以太网中传输。iSCSI 可以实现在IP网络上传递和运行SCSI协议，使其能够在诸如高速千兆以太网上进行数据存取，实现了数据的网际传递和管理。基于iSCSI建立的存储区域网（SAN）与基于光纤的FC-SAN相比，具有很好的性价比。&lt;/p&gt;
-&lt;p&gt;iSCSI属于端到端的会话层协议，它定义的是SCSI到TCP/IP的映射（如下图），即Initiator将SCSI指令和数据封装成iSCSI协议数据单元，向下提交给TCP层，最后封装成IP数据包在IP网络上传输，到达Target后通过解封装还原成SCSI指令和数据，再由存储控制器发送到指定的驱动器，从而实现SCSI命令和数据在IP网络上的透明传输。它整合了现有的存储协议SCSI和网络协议TCP/IP，实现了存储与TCP/IP网络的无缝融合。在本文中，将把发起器Initiator称为客户端，将目标器Target称为服务端以方便理解。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;http://sean-images.qiniudn.com/iscsi-protocal-arch.gif&quot; alt=&quot;iscsi-protocal-arch.gif&quot;&gt;&lt;/p&gt;
-&lt;p&gt;iSCSI 服务端和客户端的通讯就是一个在网络上封包和解包的过程，在网络的一端，数据包被封装成包括TCP/IP头、iSCSI 识别包和SCSI 数据三部分内容，传输到网络另一端时，这三部分内容分别被顺序地解开。为了保证安全，iSCSI 有约定操作顺序。在首次运行时，客户端（initiator）设备需要登录到服务端（target）中。任何一个接收到没有执行登录过程的客户端的iSCSI PDU （iSCSI rotocol Data Units，iSCSI 协议数据单元）服务端都将生成一个协议错误，并且关闭连接。在关闭会话之前，服务端可能发送回一个被驳回的iSCSI PDU。&lt;/p&gt;
-&lt;p&gt;在工作时，iSCSI使SCSI数据块由原来的SCSI总线连接扩展到internet上，这一过程有些产品通过硬件来实现，这种硬件产品被简称为TOE（TCP Offload Engine），随着近年来服务器芯片技术的不断发展，服务器处理能力日益强劲，目前更为普遍的是通过软件来实现SCSI数据块的封装过程。这种软件通常被称为iSCSI Initiator软件/驱动。Initiator软件可以将以太网卡虚拟为iSCSI卡，接受和发送iSCSI数据报文，通过普通以太网卡来进行网络连接，但是需要占用CPU资源。另外的TOE和HBA连接转换方式都需要专门的硬件设备来完成，虽然相对昂贵但执行效率高，也可以减轻主机CPU的负载。本文客户端采用Initiator驱动的连接方式。&lt;/p&gt;
-&lt;h2 id=&quot;1-2-Initiator安装&quot;&gt;&lt;a href=&quot;#1-2-Initiator安装&quot; class=&quot;headerlink&quot; title=&quot;1.2 Initiator安装&quot;&gt;&lt;/a&gt;1.2 Initiator安装&lt;/h2&gt;&lt;p&gt;在Linux 2.6内核中提供了iscsi驱动，iSCSI 驱动（driver）使主机拥有了通过IP网络访问存储的能力，但还需要一个具体的客户端工具（Linux用户空间组件）初始化iSCSI驱动，即&lt;code&gt;iscsi-initiator-utils&lt;/code&gt;，也是大家常说的open-iscsi。&lt;/p&gt;
-&lt;a id=&quot;more&quot;&gt;&lt;/a&gt;
-&lt;figure class=&quot;highlight vala&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# rpm -qa|grep iscsi&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsi-initiator-utils&lt;span class=&quot;number&quot;&gt;-6.2&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;.0&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;.873&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;-10.&lt;/span&gt;el6.x86_64&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsi-initiator-utils-devel&lt;span class=&quot;number&quot;&gt;-6.2&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;.0&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;.873&lt;/span&gt;&lt;span class=&quot;number&quot;&gt;-10.&lt;/span&gt;el6.x86_64&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# rpm -qi iscsi-initiator-utils&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;（yum install iscsi-initiator-utils iscsi-initiator-utils-devel）&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;
-&lt;p&gt;这个安装将&lt;code&gt;iscsid&lt;/code&gt;、&lt;code&gt;iscsiadm&lt;/code&gt;安装到 /sbin 目录下，它还将把默认的配置文件安装到&lt;code&gt;/etc/iscsi/&lt;/code&gt;目录下：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;code&gt;/etc/iscsi/iscsid.conf&lt;/code&gt;：所有刚发起的iSCSI session默认都将使用这个文件中的参数设定。&lt;/li&gt;
-&lt;li&gt;&lt;code&gt;/etc/iscsi/initiatorname.iscsi&lt;/code&gt;：软件iSCSI initiator的intiator名称配置文件。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;确保iscsid和iscsi两个服务器开机自启动，&lt;code&gt;chkconfig --list |grep iscsi&lt;/code&gt;，在iscsi启动的时候，iscsid和iscsiadm会读取这两个配置文件。&lt;/p&gt;
-&lt;p&gt;service iscsid [status|start]&lt;br&gt;service iscsi status        查看iscisi的信息，只有在连接成功后才输出&lt;br&gt;这里可能遇到start始终没有启动成功的信息输出，请继续往下执行discovery，一般会启动iscsid。&lt;/p&gt;
-&lt;h2 id=&quot;1-3-open-iscsi-initiator说明&quot;&gt;&lt;a href=&quot;#1-3-open-iscsi-initiator说明&quot; class=&quot;headerlink&quot; title=&quot;1.3 open-iscsi initiator说明&quot;&gt;&lt;/a&gt;1.3 open-iscsi initiator说明&lt;/h2&gt;&lt;p&gt;open-iscsi包括两个守护进程iscsid和iscsi，其中iscsid是主进程，iscsi进程则主要负责根据配置在系统启动时进行发起端（Initiator）到服务端（target）的登录，建立发起端与服务端的会话，使主机在启动后即可使用通过iSCSI提供服务的存储设备。 &lt;/p&gt;
-&lt;p&gt;iscsid进程实现iSCSI协议的控制路径以及相关管理功能。例如守护进程（指iscsid）可配置为在系统启动时基于持久化的iSCSI数据库内容，自动重新开始发现（discovery）目标设备。&lt;/p&gt;
-&lt;p&gt;Open-iSCSI是通过以下iSCSI数据库文件来实现永久配置的：&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;Discovery (&lt;code&gt;/var/lib/iscsi/send_targets&lt;/code&gt;)&lt;br&gt;在 /var/lib/iscsi/send_targets 目录下包含iSCSI portals的配置信息，每个portal对应一个文件，文件名为“iSCSI portal IP，端口号”（例如&lt;code&gt;172.29.88.61,3260&lt;/code&gt;）。&lt;/li&gt;
-&lt;li&gt;Node (&lt;code&gt;/var/lib/iscsi/nodes&lt;/code&gt;)&lt;br&gt;在 /var/lib/iscsi/nodes 目录下，生成一个或多个以iSCSI存储服务器上的Target名命名的文件夹如&lt;code&gt;iqn.2000-01.com.synology:themain-3rd.ittest&lt;/code&gt;，在该文件夹下有一个文件名为“iSCSI portal IP，编号” （例如&lt;code&gt;172.29.88.62,3260,0&lt;/code&gt;）的配置参数文件default，该文件中是initiator登录target时要使用的参数，这些参数的设置是从&lt;code&gt;/etc/iscsi/iscsi.conf&lt;/code&gt;中的参数设置继承而来的，可以通过iscsiadm对某一个参数文件进行更改（需要先注销到target的登录）。&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;code&gt;iscsiadm&lt;/code&gt;是用来管理（更新、删除、插入、查询）iSCSI配置数据库文件的命令行工具，用户能够用它对iSCSI nodes、sessions、connections和discovery records进行一系列的操作。&lt;/p&gt;
-&lt;p&gt;iSCSI node是一个在网络上可用的SCSI设备标识符，在open-iscsi中利用术语node表示目标（target）上的门户（portal）。一个target可以有多个portal，portal 由IP地址和端口构成。&lt;/p&gt;
-&lt;h1 id=&quot;2-初次挂载网络存储&quot;&gt;&lt;a href=&quot;#2-初次挂载网络存储&quot; class=&quot;headerlink&quot; title=&quot;2. 初次挂载网络存储&quot;&gt;&lt;/a&gt;2. 初次挂载网络存储&lt;/h1&gt;&lt;h2 id=&quot;2-1-设置InitiatorName&quot;&gt;&lt;a href=&quot;#2-1-设置InitiatorName&quot; class=&quot;headerlink&quot; title=&quot;2.1 设置InitiatorName&quot;&gt;&lt;/a&gt;2.1 设置InitiatorName&lt;/h2&gt;&lt;p&gt;initiator名称用来唯一标识一个iSCSI Initiator端。保存此名称的配置文件为&lt;code&gt;/etc/iscsi/initiatorname.iscsi&lt;/code&gt;：&lt;br&gt;&lt;figure class=&quot;highlight ini&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# vi /etc/iscsi/initiatorname.iscsi&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attr&quot;&gt;InitiatorName&lt;/span&gt;=iqn.&lt;span class=&quot;number&quot;&gt;2000&lt;/span&gt;-&lt;span class=&quot;number&quot;&gt;01&lt;/span&gt;.com.synology:themain-&lt;span class=&quot;number&quot;&gt;3&lt;/span&gt;rd.ittest&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;注意大小写，同时，必须顶格写，xxxx代表要设置的initiator名称，请遵循iqn命名规范，格式为iqn.domaindate.reverse.domain.name:optional_name。&lt;/p&gt;
-&lt;h2 id=&quot;2-2-iSCSI-Initiator配置&quot;&gt;&lt;a href=&quot;#2-2-iSCSI-Initiator配置&quot; class=&quot;headerlink&quot; title=&quot;2.2 iSCSI Initiator配置&quot;&gt;&lt;/a&gt;2.2 iSCSI Initiator配置&lt;/h2&gt;&lt;p&gt;iSCSI Initiator的配置文件为&lt;code&gt;/etc/iscsi/iscsid.conf&lt;/code&gt;,在iSCSI initiator的iscsid进程启动和执行iscsiadm命令时，将读取这个配置文件的内容，获取与SCSI目标进行交互的相关信息。&lt;/p&gt;
-&lt;h3 id=&quot;2-2-1-添加CHAP认证&quot;&gt;&lt;a href=&quot;#2-2-1-添加CHAP认证&quot; class=&quot;headerlink&quot; title=&quot;2.2.1 添加CHAP认证&quot;&gt;&lt;/a&gt;2.2.1 添加CHAP认证&lt;/h3&gt;&lt;p&gt;本组下的各个设置项主要用来指定Initiator与target验证方式。&lt;br&gt;&lt;figure class=&quot;highlight crmsh&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;vi /etc/iscsi/iscsid.conf&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# To enable CHAP authentication set node.session.auth.authmethod&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;node&lt;/span&gt;.&lt;span class=&quot;title&quot;&gt;session&lt;/span&gt;.auth.authmethod = CHAP        去掉注释&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# To set a CHAP username and password for initiator&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;node&lt;/span&gt;.&lt;span class=&quot;title&quot;&gt;session&lt;/span&gt;.auth.username = ittest              修改为网管提供的认证username/password&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;keyword&quot;&gt;node&lt;/span&gt;.&lt;span class=&quot;title&quot;&gt;session&lt;/span&gt;.auth.password = Storageittest&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;上面是在我的环境中最为简单的一种CHAP（Challenge Handshake Authentication Protocol）认证方式，而且只验证的节点会话initiator端。其实iSCSI验证可以是双向的，根据服务端的设置，可以验证节点会话的target端（username_in），验证发现会话的CHAP initiator，验证发现会话的CHAP target。（节点会话node.session即登录认证，发现会话discovery.sendtargets即查看）&lt;/p&gt;
-&lt;h3 id=&quot;2-2-2-其他配置项&quot;&gt;&lt;a href=&quot;#2-2-2-其他配置项&quot; class=&quot;headerlink&quot; title=&quot;2.2.2 其他配置项&quot;&gt;&lt;/a&gt;2.2.2 其他配置项&lt;/h3&gt;&lt;p&gt;处理CHAP认证需要关注外，其它的都保持默认即可，但是你需要知道可以修改如:&lt;/p&gt;
-&lt;ol&gt;
-&lt;li&gt;设置initiator与target端交互的超时时间&lt;/li&gt;
-&lt;li&gt;设置iscsid重试登录节点的次数&lt;/li&gt;
-&lt;li&gt;是否开机启动iscsid等待&lt;/li&gt;
-&lt;/ol&gt;
-&lt;h2 id=&quot;2-3-扫描并登录到iqn连接&quot;&gt;&lt;a href=&quot;#2-3-扫描并登录到iqn连接&quot; class=&quot;headerlink&quot; title=&quot;2.3 扫描并登录到iqn连接&quot;&gt;&lt;/a&gt;2.3 扫描并登录到iqn连接&lt;/h2&gt;&lt;p&gt;open-iscsi initiator-utils提供的管理命令为&lt;code&gt;iscsiadm&lt;/code&gt;，此命令包括discovery、node、session几种模式，分别处理不同的情况。在客户端使用Target提供的存储空间前，必须在服务器上通过Initiator软件执行以下步骤：发现目标设备 –&amp;gt; 登录目标设备 –&amp;gt; 与目标设备建立会话，下面分别说明通过各个命令进行说明。&lt;/p&gt;
-&lt;h3 id=&quot;2-3-1-discovery-sendtargets&quot;&gt;&lt;a href=&quot;#2-3-1-discovery-sendtargets&quot; class=&quot;headerlink&quot; title=&quot;2.3.1 discovery sendtargets&quot;&gt;&lt;/a&gt;2.3.1 discovery sendtargets&lt;/h3&gt;&lt;p&gt;可以通过sendtargets方式（根据iscsi服务器端使用的方式不同还有slp、isns）发现属于你的iqn（iSCSI Qualified Name）：&lt;br&gt;&lt;figure class=&quot;highlight nginx&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;attribute&quot;&gt;iscsiadm&lt;/span&gt; -m discovery -t sendtargets -p &lt;span class=&quot;number&quot;&gt;172.29.88.62&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsiadm -m discovery -t sendtargets -p &lt;span class=&quot;number&quot;&gt;172.29.88.62:3260&lt;/span&gt; |grep ittest&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;默认端口3260。discovery之前会自动启动iscsid服务，有时候&lt;code&gt;service iscsid start&lt;/code&gt;启动没反应，可以通过这种方式启动服务。&lt;br&gt;此命令查询目标门户（Portal）为172.29.88.62:3260上的目标，查找成功后，返回相应的target ID，同时在&lt;code&gt;/var/lib/iscsi/send_targets&lt;/code&gt;和 &lt;code&gt;/var/lib/iscsi/nodes&lt;/code&gt;目录下记录相应的门户和节点信息。使用&lt;code&gt;iscsiadm -m node&lt;/code&gt;命令，可以查看到发现的节点记录。&lt;/p&gt;
-&lt;h3 id=&quot;2-3-2-node-session-login&quot;&gt;&lt;a href=&quot;#2-3-2-node-session-login&quot; class=&quot;headerlink&quot; title=&quot;2.3.2 node session login&quot;&gt;&lt;/a&gt;2.3.2 node session login&lt;/h3&gt;&lt;p&gt;在完成目标发现后，即可以登录到相应的节点，使用目标设备提供的存储空间：&lt;br&gt;&lt;figure class=&quot;highlight css&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# &lt;span class=&quot;selector-tag&quot;&gt;iscsiadm&lt;/span&gt; &lt;span class=&quot;selector-tag&quot;&gt;-m&lt;/span&gt; &lt;span class=&quot;selector-tag&quot;&gt;node&lt;/span&gt; &lt;span class=&quot;selector-tag&quot;&gt;-T&lt;/span&gt; &lt;span class=&quot;selector-tag&quot;&gt;iqn&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.2000-01&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.com&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.synology&lt;/span&gt;&lt;span class=&quot;selector-pseudo&quot;&gt;:themain-3rd.ittest&lt;/span&gt; &lt;span class=&quot;selector-tag&quot;&gt;-p&lt;/span&gt; 172&lt;span class=&quot;selector-class&quot;&gt;.29&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.88&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.62&lt;/span&gt; &lt;span class=&quot;selector-tag&quot;&gt;--login&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;&lt;code&gt;-T&lt;/code&gt;后面跟target名称，&lt;code&gt;--login&lt;/code&gt;等同于&lt;code&gt;-l&lt;/code&gt;，&lt;/p&gt;
-&lt;p&gt;登录目标节点成功后，即建立了initiator与target之间的会话（session），同时target提供的存储设备也挂载到主机中，在/dev目录下生成一个新的设备文件类似于sdb、sdc等。使用&lt;code&gt;iscsiadm -m session -P 3&lt;/code&gt;（与&lt;code&gt;service iscsi status&lt;/code&gt;相同）来查看连接会话信息。&lt;/p&gt;
-&lt;h2 id=&quot;2-4-使用磁盘-—-lvm&quot;&gt;&lt;a href=&quot;#2-4-使用磁盘-—-lvm&quot; class=&quot;headerlink&quot; title=&quot;2.4 使用磁盘 — lvm&quot;&gt;&lt;/a&gt;2.4 使用磁盘 — lvm&lt;/h2&gt;&lt;p&gt;LVM是非常流行的可修改磁盘分区大小的管理方式，可以根据你的需要使用使用lvm管理磁盘。&lt;br&gt;假设新存储的设备路径为&lt;code&gt;/dev/sdb&lt;/code&gt;&lt;br&gt;&lt;figure class=&quot;highlight dts&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;pvcreate &lt;span class=&quot;meta-keyword&quot;&gt;/dev/&lt;/span&gt;sdb                    &lt;span class=&quot;meta&quot;&gt;## 在新存储上建立物理卷&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;pvdisplay                                   &lt;span class=&quot;meta&quot;&gt;## 查看物理卷状态&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;vgcreate vg_ittest &lt;span class=&quot;meta-keyword&quot;&gt;/dev/&lt;/span&gt;sdb      &lt;span class=&quot;meta&quot;&gt;## 在该物理卷上建立名为vg_test的卷组&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;vgdisplay                                   &lt;span class=&quot;meta&quot;&gt;## 查看已建立的卷组状态&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;lvcreate -l &lt;span class=&quot;number&quot;&gt;100&lt;/span&gt;%FREE -n lv_static vg_ittest&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;在vg_ittest卷组上建立名为lv_static的逻辑卷，-L可指定分区大小，此处-l表示使用全部空间&lt;br&gt;&lt;figure class=&quot;highlight dts&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;vgscan或lvdisplay                     &lt;span class=&quot;meta&quot;&gt;## 查看逻辑卷的状态&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;vgchange -ay                            &lt;span class=&quot;meta&quot;&gt;## 使卷组处于激活状态&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;mkfs.ext4 &lt;span class=&quot;meta-keyword&quot;&gt;/dev/&lt;/span&gt;mapper/vg_ittest-lv_static            &lt;span class=&quot;meta&quot;&gt;## 格式化已创建的逻辑卷，文件系统格式为ext4&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;格式化完毕后，使用mount命令挂载即可：&lt;br&gt;&lt;figure class=&quot;highlight dts&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;mount -o acl,rw &lt;span class=&quot;meta-keyword&quot;&gt;/dev/&lt;/span&gt;mapper/vg_ittest-lv_static  /iscsi    &lt;span class=&quot;meta&quot;&gt;## /iscsi为事先建立的挂载点&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;也可以根据需求划分成多个分区挂载。&lt;/p&gt;
-&lt;p&gt;&lt;strong&gt;开机自动挂载&lt;/strong&gt;&lt;br&gt;&lt;figure class=&quot;highlight stylus&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;vi /etc/rc.d/rc&lt;span class=&quot;selector-class&quot;&gt;.local&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsiadm -m node -T iqn.&lt;span class=&quot;number&quot;&gt;2000&lt;/span&gt;-&lt;span class=&quot;number&quot;&gt;01&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.com&lt;/span&gt;&lt;span class=&quot;selector-class&quot;&gt;.synology&lt;/span&gt;:themain-&lt;span class=&quot;number&quot;&gt;3&lt;/span&gt;rd&lt;span class=&quot;selector-class&quot;&gt;.ittest&lt;/span&gt; -&lt;span class=&quot;selector-tag&quot;&gt;p&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;172.29&lt;/span&gt;.&lt;span class=&quot;number&quot;&gt;88.62&lt;/span&gt; --login&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;vgchange -ay &amp;amp;&amp;amp; mount -o acl,rw /dev/mapper/vg_ittest-lv_static /iscsi&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;h1 id=&quot;3-维护操作&quot;&gt;&lt;a href=&quot;#3-维护操作&quot; class=&quot;headerlink&quot; title=&quot;3. 维护操作&quot;&gt;&lt;/a&gt;3. 维护操作&lt;/h1&gt;&lt;h2 id=&quot;3-1-正常断开重连网络存储&quot;&gt;&lt;a href=&quot;#3-1-正常断开重连网络存储&quot; class=&quot;headerlink&quot; title=&quot;3.1 正常断开重连网络存储&quot;&gt;&lt;/a&gt;3.1 正常断开重连网络存储&lt;/h2&gt;&lt;p&gt;因为磁盘上就是数据（一般网络存储用于备份），因此尽量减少异常断开存储的可能性，所以保险起见先卸载，再断开连接(&lt;code&gt;-u&lt;/code&gt;)。&lt;br&gt;&lt;figure class=&quot;highlight vala&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# umount /iscsi&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# vgchange -an &amp;amp;&amp;amp; vgscan&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# iscsiadm -m session&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# iscsiadm -m node -T iqn.2000-01.com.synology:themain-3rd.ittest -p 172.29.88.62 --logout&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;h2 id=&quot;3-2-异常断开恢复&quot;&gt;&lt;a href=&quot;#3-2-异常断开恢复&quot; class=&quot;headerlink&quot; title=&quot;3.2 异常断开恢复&quot;&gt;&lt;/a&gt;3.2 异常断开恢复&lt;/h2&gt;&lt;p&gt;如果使用LVM管理磁盘，由于网络中断，或主机突然关机，会导致网络存储异常断开，下次启动后重新连接可能会报如下错误：&lt;br&gt;&lt;figure class=&quot;highlight sql&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;6&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;7&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;8&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;# vgscan&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; Reading all physical volumes.  This may take a while...&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; /dev/backupdrive1/&lt;span class=&quot;keyword&quot;&gt;backup&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;read&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;failed&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;after&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;4096&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;at&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;319836585984&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;Input&lt;/span&gt;/&lt;span class=&quot;keyword&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;error&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; /dev/backupdrive1/&lt;span class=&quot;keyword&quot;&gt;backup&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;read&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;failed&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;after&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;4096&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;at&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;319836643328&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;Input&lt;/span&gt;/&lt;span class=&quot;keyword&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;error&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; /dev/backupdrive1/&lt;span class=&quot;keyword&quot;&gt;backup&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;read&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;failed&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;after&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;4096&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;at&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;Input&lt;/span&gt;/&lt;span class=&quot;keyword&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;error&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; /dev/backupdrive1/&lt;span class=&quot;keyword&quot;&gt;backup&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;read&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;failed&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;after&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;0&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;of&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;4096&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;at&lt;/span&gt; &lt;span class=&quot;number&quot;&gt;4096&lt;/span&gt;: &lt;span class=&quot;keyword&quot;&gt;Input&lt;/span&gt;/&lt;span class=&quot;keyword&quot;&gt;output&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;error&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; &lt;span class=&quot;keyword&quot;&gt;Found&lt;/span&gt; volume &lt;span class=&quot;keyword&quot;&gt;group&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;backupdrive1&quot;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;using&lt;/span&gt; metadata &lt;span class=&quot;keyword&quot;&gt;type&lt;/span&gt; lvm2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt; &lt;span class=&quot;keyword&quot;&gt;Found&lt;/span&gt; volume &lt;span class=&quot;keyword&quot;&gt;group&lt;/span&gt; &lt;span class=&quot;string&quot;&gt;&quot;networkdrive&quot;&lt;/span&gt; &lt;span class=&quot;keyword&quot;&gt;using&lt;/span&gt; metadata &lt;span class=&quot;keyword&quot;&gt;type&lt;/span&gt; lvm2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;产生原因就是，在卷组（VG）失活（deactivate）之前就移除了外部的LVM设备。在你断开连接之前，需要保证以下命令被执行：&lt;br&gt;&lt;figure class=&quot;highlight apache&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;comment&quot;&gt;# vgchange -an volume_group_name&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;解决方案就是，（假设你已经用&lt;code&gt;vgchange -ay vg&lt;/code&gt;命令来激活卷组，但仍有 Input/output error 的错误信息。）执行命令&lt;code&gt;vgchange -an volume group name&lt;/code&gt;，移除外部设备，稍候几分钟后再执行以下命令：&lt;br&gt;&lt;figure class=&quot;highlight vala&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# vgscan&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;&lt;span class=&quot;meta&quot;&gt;# vgchange -ay volume_group_name&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;h2 id=&quot;3-3-进程数超标&quot;&gt;&lt;a href=&quot;#3-3-进程数超标&quot; class=&quot;headerlink&quot; title=&quot;3.3 进程数超标&quot;&gt;&lt;/a&gt;3.3 进程数超标&lt;/h2&gt;&lt;p&gt;iscsi存储使用正常，但&lt;code&gt;ps -ef|grep iscsi&lt;/code&gt;则包含200+以上的类似于&lt;code&gt;[iscsi_q_112]&lt;/code&gt;进程，并且无法kill，使用&lt;code&gt;service iscsi status&lt;/code&gt;不断输出类似：&lt;br&gt;&lt;figure class=&quot;highlight applescript&quot;&gt;&lt;table&gt;&lt;tr&gt;&lt;td class=&quot;gutter&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;1&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;2&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;3&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;4&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;5&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;td class=&quot;code&quot;&gt;&lt;pre&gt;&lt;span class=&quot;line&quot;&gt;iscsiadm: could &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;built_in&quot;&gt;read&lt;/span&gt; session targetname: &lt;span class=&quot;number&quot;&gt;5&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsiadm: could &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; find session &lt;span class=&quot;built_in&quot;&gt;info for&lt;/span&gt; session30&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsiadm: could &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; &lt;span class=&quot;built_in&quot;&gt;read&lt;/span&gt; session targetname: &lt;span class=&quot;number&quot;&gt;5&lt;/span&gt;&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;iscsiadm: could &lt;span class=&quot;keyword&quot;&gt;not&lt;/span&gt; find session &lt;span class=&quot;built_in&quot;&gt;info for&lt;/span&gt; session31&lt;/span&gt;&lt;br&gt;&lt;span class=&quot;line&quot;&gt;...&lt;/span&gt;&lt;br&gt;&lt;/pre&gt;&lt;/td&gt;&lt;/tr&gt;&lt;/table&gt;&lt;/figure&gt;&lt;/p&gt;
-&lt;p&gt;这个问题很纠结，但重启服务器是可以解决的。网上资料很少，我猜想是iscsid服务端设置认证方面的问题。&lt;/p&gt;
-&lt;h1 id=&quot;4-iscsi的其它常用操作&quot;&gt;&lt;a href=&quot;#4-iscsi的其它常用操作&quot; class=&quot;headerlink&quot; title=&quot;4. iscsi的其它常用操作&quot;&gt;&lt;/a&gt;4. iscsi的其它常用操作&lt;/h1&gt;&lt;ul&gt;
-&lt;li&gt;&lt;p&gt;列出所有target&lt;br&gt;&lt;code&gt;iscsiadm -m node&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;连接所有target&lt;br&gt;&lt;code&gt;iscsiadm -m node -L all&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;连接指定target&lt;br&gt;&lt;code&gt;iscsiadm -m node -T iqn.... -p 172.29.88.62 --login&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;使用如下命令可以查看配置信息&lt;br&gt;&lt;code&gt;iscsiadm -m node -o show -T iqn.2000-01.com.synology:rackstation.exservice-bak&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;查看目前 iSCSI target 连接状态&lt;br&gt;&lt;code&gt;iscsiadm -m session&lt;/code&gt;&lt;br&gt;iscsiadm: No active sessions.&lt;br&gt;(目前没有已连接的 iSCSI target)&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;断开所有target&lt;br&gt;&lt;code&gt;iscsiadm -m node -U all&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;断开指定target&lt;br&gt;&lt;code&gt;iscsiadm -m node -T iqn...  -p 172.29.88.62 --logout&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;删除所有node信息&lt;br&gt;&lt;code&gt;iscsiadm -m node --op delete&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;删除指定节点（/var/lib/iscsi/nodes目录下，先断开session）&lt;br&gt;&lt;code&gt;iscsiadm -m node -o delete -name iqn.2012-01.cn.nayun:test-01&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;li&gt;&lt;p&gt;删除一个目标（/var/lib/iscsi/send_targets目录下）&lt;br&gt;&lt;code&gt;iscsiadm --mode discovery -o delete -p 172.29.88.62:3260&lt;/code&gt;&lt;/p&gt;
-&lt;/li&gt;
-&lt;/ul&gt;
-&lt;p&gt;&lt;strong&gt;参考&lt;/strong&gt;&lt;/p&gt;
-&lt;ul&gt;
-&lt;li&gt;&lt;a href=&quot;http://blog.csdn.net/sflsgfs/article/details/9180521&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;CentOS客户端加载ISCSI磁盘&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;http://tagche.blog.51cto.com/649757/267390/&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;linux iscsi initiator 安装配置&lt;/a&gt;&lt;/li&gt;
-&lt;li&gt;&lt;a href=&quot;http://linux.vbird.org/linux_server/0460iscsi.php&quot; target=&quot;_blank&quot; rel=&quot;external&quot;&gt;http://linux.vbird.org/linux_server/0460iscsi.php&lt;/a&gt;&lt;/li&gt;
-&lt;/ul&gt;
-</content>
-    
-    <summary type="html">
-    
-      &lt;p&gt;本文不介绍iSCSI服务端的搭建过程，不然就会很累赘。主题就是怎么去完成iscsi网络存储的挂载过程，并顺带介绍一些必要的概念。&lt;/p&gt;
-&lt;h1 id=&quot;1-iscsi介绍与initiator安装&quot;&gt;&lt;a href=&quot;#1-iscsi介绍与initiator安装&quot; class=&quot;headerlink&quot; title=&quot;1. iscsi介绍与initiator安装&quot;&gt;&lt;/a&gt;1. iscsi介绍与initiator安装&lt;/h1&gt;&lt;h2 id=&quot;1-1-iSCSI介绍&quot;&gt;&lt;a href=&quot;#1-1-iSCSI介绍&quot; class=&quot;headerlink&quot; title=&quot;1.1 iSCSI介绍&quot;&gt;&lt;/a&gt;1.1 iSCSI介绍&lt;/h2&gt;&lt;p&gt;iSCSI简单来说，就是把SCSI指令通过TCP/IP协议封装起来，在以太网中传输。iSCSI 可以实现在IP网络上传递和运行SCSI协议，使其能够在诸如高速千兆以太网上进行数据存取，实现了数据的网际传递和管理。基于iSCSI建立的存储区域网（SAN）与基于光纤的FC-SAN相比，具有很好的性价比。&lt;/p&gt;
-&lt;p&gt;iSCSI属于端到端的会话层协议，它定义的是SCSI到TCP/IP的映射（如下图），即Initiator将SCSI指令和数据封装成iSCSI协议数据单元，向下提交给TCP层，最后封装成IP数据包在IP网络上传输，到达Target后通过解封装还原成SCSI指令和数据，再由存储控制器发送到指定的驱动器，从而实现SCSI命令和数据在IP网络上的透明传输。它整合了现有的存储协议SCSI和网络协议TCP/IP，实现了存储与TCP/IP网络的无缝融合。在本文中，将把发起器Initiator称为客户端，将目标器Target称为服务端以方便理解。&lt;/p&gt;
-&lt;p&gt;&lt;img src=&quot;http://sean-images.qiniudn.com/iscsi-protocal-arch.gif&quot; alt=&quot;iscsi-protocal-arch.gif&quot;&gt;&lt;/p&gt;
-&lt;p&gt;iSCSI 服务端和客户端的通讯就是一个在网络上封包和解包的过程，在网络的一端，数据包被封装成包括TCP/IP头、iSCSI 识别包和SCSI 数据三部分内容，传输到网络另一端时，这三部分内容分别被顺序地解开。为了保证安全，iSCSI 有约定操作顺序。在首次运行时，客户端（initiator）设备需要登录到服务端（target）中。任何一个接收到没有执行登录过程的客户端的iSCSI PDU （iSCSI rotocol Data Units，iSCSI 协议数据单元）服务端都将生成一个协议错误，并且关闭连接。在关闭会话之前，服务端可能发送回一个被驳回的iSCSI PDU。&lt;/p&gt;
-&lt;p&gt;在工作时，iSCSI使SCSI数据块由原来的SCSI总线连接扩展到internet上，这一过程有些产品通过硬件来实现，这种硬件产品被简称为TOE（TCP Offload Engine），随着近年来服务器芯片技术的不断发展，服务器处理能力日益强劲，目前更为普遍的是通过软件来实现SCSI数据块的封装过程。这种软件通常被称为iSCSI Initiator软件/驱动。Initiator软件可以将以太网卡虚拟为iSCSI卡，接受和发送iSCSI数据报文，通过普通以太网卡来进行网络连接，但是需要占用CPU资源。另外的TOE和HBA连接转换方式都需要专门的硬件设备来完成，虽然相对昂贵但执行效率高，也可以减轻主机CPU的负载。本文客户端采用Initiator驱动的连接方式。&lt;/p&gt;
-&lt;h2 id=&quot;1-2-Initiator安装&quot;&gt;&lt;a href=&quot;#1-2-Initiator安装&quot; class=&quot;headerlink&quot; title=&quot;1.2 Initiator安装&quot;&gt;&lt;/a&gt;1.2 Initiator安装&lt;/h2&gt;&lt;p&gt;在Linux 2.6内核中提供了iscsi驱动，iSCSI 驱动（driver）使主机拥有了通过IP网络访问存储的能力，但还需要一个具体的客户端工具（Linux用户空间组件）初始化iSCSI驱动，即&lt;code&gt;iscsi-initiator-utils&lt;/code&gt;，也是大家常说的open-iscsi。&lt;/p&gt;
-    
-    </summary>
-    
-      <category term="Linux" scheme="http://seanlook.com/categories/Linux/"/>
-    
-    
-      <category term="iscsi" scheme="http://seanlook.com/tags/iscsi/"/>
     
   </entry>
   
