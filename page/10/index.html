@@ -254,6 +254,145 @@
             
               
                 
+                <a class="post-title-link" href="/2014/12/18/docker-core-technology-preview/" itemprop="url">
+                  【转+改】Docker核心技术预览
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2014-12-18T13:21:25+08:00" content="2014-12-18">
+              2014-12-18
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Virtualization/" itemprop="url" rel="index">
+                    <span itemprop="name">Virtualization</span>
+                  </a>
+                </span>
+
+                
+                
+                  , 
+                
+
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/Virtualization/Docker/" itemprop="url" rel="index">
+                    <span itemprop="name">Docker</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2014/12/18/docker-core-technology-preview/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2014/12/18/docker-core-technology-preview/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>本文简单介绍docker使用到的部分核心技术，但不做深入探究，因为每一个技术都是一个独立的项目，有机会再分别详细介绍。<br>来源地址：<a href="http://www.infoq.com/cn/articles/docker-core-technology-preview">http://www.infoq.com/cn/articles/docker-core-technology-preview</a></p>
+<p><img src="http://sean-images.qiniudn.com/docker-core-tech.png" alt="docker-core-tech"></p>
+<h2 id="Linux-Namespace-（实例隔离）"><a href="#Linux-Namespace-（实例隔离）" class="headerlink" title="Linux Namespace （实例隔离）"></a>Linux Namespace （实例隔离）</h2><blockquote>
+<p>The purpose of each namespace is to wrap a particular global system resource in an abstraction that makes it appear to the processes within the namespace that they have their own isolated instance of the global resource.</p>
+</blockquote>
+<p>每个用户实例之间相互隔离，互不影响。一般的硬件虚拟化方法给出的方法是VM，而LXC给出的方法是container，更细一点讲就是kernel namespace。其中pid、net、ipc、mnt、uts、user等namespace将container的进程、网络、消息、文件系统、UTS(“UNIX Time-sharing System”)和用户空间隔离开。</p>
+<ul>
+<li><strong>pid namespace</strong></li>
+</ul>
+<p>不同用户的进程就是通过pid namespace隔离开的，且不同 namespace 中可以有相同pid。所有的LXC进程在docker中的父进程为docker进程，每个lxc进程具有不同的namespace。同时由于允许嵌套，因此可以很方便的实现 Docker in Docker。</p>
+<p><img src="http://sean-images.qiniudn.com/docker-kernel-pid-namespace.png" alt="docker-kernel-pid-namespace.png"></p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2014/12/18/docker-core-technology-preview/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2014/12/18/docker-introduction/" itemprop="url">
                   Docker简介
                 </a>
@@ -787,148 +926,6 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2014/12/05/mysql_incremental_backup_example/" itemprop="url">
-                  MySQL增量备份与恢复实例
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">Posted on</span>
-            <time itemprop="dateCreated" datetime="2014-12-05T09:21:25+08:00" content="2014-12-05">
-              2014-12-05
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/MySQL/" itemprop="url" rel="index">
-                    <span itemprop="name">MySQL</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2014/12/05/mysql_incremental_backup_example/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2014/12/05/mysql_incremental_backup_example/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>小量的数据库可以每天进行完整备份，因为这也用不了多少时间，但当数据库很大时，就不太可能每天进行一次完整备份了，这时候就可以使用增量备份。增量备份的原理就是使用了mysql的binlog日志。<br>本次操作的MySQL版本为<code>5.5.40 for Linux (x86_64)</code>。</p>
-<p>增量备份要确保打开了二进制日志，参考<a href="http://seanlook.com/2014/12/04/mysql_log_binlog/">mysql的日志系统</a>：<br><figure class="highlight axapta"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; show variables <span class="keyword">like</span> <span class="string">'%log_bin%'</span>;</span><br></pre></td></tr></table></figure></p>
-<p>首先对pak数据库做一个完整备份：<br><figure class="highlight brainfuck"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">$</span> <span class="comment">mysqldump</span> <span class="literal">-</span><span class="comment">h</span> <span class="comment">localhost</span> <span class="literal">-</span><span class="comment">upak</span> <span class="literal">-</span><span class="comment">ppwd</span> <span class="literal">-</span><span class="comment">P3306</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">master</span><span class="literal">-</span><span class="comment">data=2</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">single</span><span class="literal">-</span><span class="comment">transaction</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">opt</span> <span class="comment">pak</span> &gt; <span class="comment">pak_bak_full</span><span class="string">.</span><span class="comment">sql</span></span><br></pre></td></tr></table></figure></p>
-<p>这时候就会得到一个全备文件pak_bak_full.sql。mysqldump操作会导致滚动一次log，假设新的binlog文件是mysql-bin.000002。</p>
-<h3 id="1-模拟插入数据和误操作"><a href="#1-模拟插入数据和误操作" class="headerlink" title="1. 模拟插入数据和误操作"></a>1. 模拟插入数据和误操作</h3><p>a. 在pak库的某个表插入一些数据，然后执行<code>flush logs</code>命令。这时将会产生一个新的二进制日志文件mysql-bin.000003，mysql-bin.000002则保存了全备过后的所有更改，既增加记录的操作也保存在了mysql-bin.00002中。</p>
-<p>b. 再在pak库中的t_user表中增加两条记录，然后误删除t_user表。t_user中增加记录的操作和删除表的操作都记录在mysql-bin.000003中。</p>
-<h3 id="2-开始恢复"><a href="#2-开始恢复" class="headerlink" title="2. 开始恢复"></a>2. 开始恢复</h3><p>恢复过程不要记录日志：<br><figure class="highlight applescript"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mysql &gt; <span class="keyword">set</span> <span class="keyword">global</span> sql_log_bin=<span class="number">0</span>;</span><br></pre></td></tr></table></figure></p>
-<h3 id="3-首先导入全备数据"><a href="#3-首先导入全备数据" class="headerlink" title="3. 首先导入全备数据"></a>3. 首先导入全备数据</h3><figure class="highlight dts"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ mysql -h localhost -upak -ppwd <span class="params">&lt; pak_bak_full.sql</span><br><span class="line">或</span><br><span class="line">mysql&gt;</span> source <span class="meta-keyword">/path/</span>backup/pak_bak_full.sql</span><br></pre></td></tr></table></figure>
-<p>我们也可以看到全备时的binlog位置：<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">head -50 <span class="keyword">backup</span>-<span class="keyword">file</span>.<span class="keyword">sql</span> |grep <span class="string">'CHANGE MASTER'</span></span><br><span class="line"><span class="comment">-- CHANGE MASTER TO MASTER_LOG_FILE='mysql-bin.000001', MASTER_LOG_POS=4321;</span></span><br></pre></td></tr></table></figure></p>
-<p>查看当前所在二进制日志中的位置：<br><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; show master status;</span><br><span class="line">```   </span><br><span class="line">根据上面两个position能大概确定需要完整恢复哪几个binlog文件。</span><br><span class="line"></span><br><span class="line"><span class="comment">&lt;!-- more --&gt;</span></span><br><span class="line"></span><br><span class="line">### 4. 恢复mysql-bin.000002 ###</span><br><span class="line">在待恢复的position或时间点以前、全备以后的binlog需要全部恢复，多个文件以空格隔开</span><br></pre></td></tr></table></figure></p>
-<p>$ mysqlbinlog /var/lib/mysql/mysql-bin.000002 | mysql -uroot -p<br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">此时查询可以得到前两条数据。</span><br><span class="line"></span><br><span class="line">### 5. 恢复部分mysql-bin.000003 ###</span><br><span class="line">这个日志中包括了新增记录和误删表两个部分，我们需要恢复到新增记录之后、误删操作以前的位置。</span><br><span class="line"></span><br><span class="line">如果知道误操作的命令如`<span class="keyword">DROP</span> <span class="keyword">TABLE</span><span class="string">`，则可以通过下面的方法在binlog文件中找到误操作之前的那个position：</span><br><span class="line">（如下面的信息显示，误操作`</span><span class="keyword">DROP</span> <span class="keyword">TABLE</span><span class="string">`之前的pos是775，在datetime 141204 15:08:04或pos 882时完成`</span><span class="keyword">DROP</span> <span class="keyword">TABLE</span><span class="string">`操作）</span></span><br></pre></td></tr></table></figure></p>
-<p>$ mysqlbinlog /var/lib/mysql/mysql-bin.000003 |grep -C 5 ‘DROP TABLE’</p>
-<p>#141204 15:07:05 server id 1  end_log_pos 775     Xid = 376<br>COMMIT/<em>!</em>/;</p>
-<h1 id="at-775"><a href="#at-775" class="headerlink" title="at 775"></a>at 775</h1><p>#141204 15:08:04 server id 1  end_log_pos 882     Query    thread_id=10    exec_time=0    error_code=0<br>SET TIMESTAMP=1417676884/<em>!</em>/;<br>DROP TABLE <code>t_user</code> /<em> generated by server </em>/<br>/<em>!</em>/;</p>
-<h1 id="at-882"><a href="#at-882" class="headerlink" title="at 882"></a>at 882</h1><figure class="highlight"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">恢复命令：</span><br></pre></td></tr></table></figure>
-<p>$ mysqlbinlog /var/lib/mysql/mysql-bin.000003 –stop-position=775 | mysql -h localhost -uroot -p<br><figure class="highlight arduino"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">如果<span class="built_in">position</span>难以确定，但知道需要恢复到的确切（服务器）时间，也可以使用datetime：</span><br></pre></td></tr></table></figure></p>
-<p>$ mysqlbinlog /var/lib/mysql/mysql-bin.000003 –stop-datetime=”2014-12-04 15:08:00” | mysql -uroot -p<br><figure class="highlight arduino"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line">如果不是误操作导致的，而是迁移数据库，那么不需要<span class="built_in">position</span>或datetime，使用所有binlog文件增量恢复即可。</span><br><span class="line"></span><br><span class="line">确定恢复成功后记得打开日志记录：</span><br></pre></td></tr></table></figure></p>
-<p>mysql &gt; set global sql_log_bin=1;<br>``` </p>
-<p>###报错###</p>
-<ol>
-<li><p>unknown variable ‘default-character-set=utf8’<br>在使用<code>mysqlbinlog</code>查看二进制日志的时候，提示下面的错误：</p>
-<blockquote>
-<p>/usr/local/mysql/bin/mysqlbinlog: unknown variable ‘default-character-set=utf8’</p>
-</blockquote>
-<p>原因是在我为了统一mysql客户端到服务端的的字符编码，在<code>/etc/my.cnf</code>文件的<code>[client]</code>、<code>[mysqld]</code>等节加入了<code>default-character-set = utf8</code>，<code>mysqlbinlog</code>会从<code>my.cnf</code>中的<code>[client]</code>读取配置，但奈何mysqlbinlog并不认识这个选项（据说是个bug）导致的。</p>
-<p>应对这个bug的方法有两个：<br>第一，自然是注释到<code>[client]</code>中的这个字符集配置；<br>第二，改用<code>loose-default-character-set = utf8</code>。在选项前加了<code>loose-</code>，表示当程序不认识此选项时会略过此选项，并给出一个警告。</p>
-</li>
-</ol>
-
-          
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -974,7 +971,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">73</span>
+              <span class="site-state-item-count">74</span>
               <span class="site-state-item-name">posts</span>
             </a>
           </div>
