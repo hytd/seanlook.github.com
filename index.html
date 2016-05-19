@@ -254,6 +254,128 @@
             
               
                 
+                <a class="post-title-link" href="/2016/05/18/mysql-blob-row_format/" itemprop="url">
+                  InnoDB行格式对text/blob大变长字段的影响
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-05-18T16:32:49+08:00" content="2016-05-18">
+              2016-05-18
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/05/18/mysql-blob-row_format/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/05/18/mysql-blob-row_format/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>最近在排查现网Text与Blob类型，发现有不少，在《高性能MySQL(第3版)》看到对这两种变长数据类型的处理会涉及到在磁盘上创建临时表，性能开销比较大。于是把影响blob型数据存储方式了解了一下：row_format。<!-- 关于临时表的内容，请参考 --></p>
+<h2 id="1-InnoDB的Antelop与Barracuda文件格式"><a href="#1-InnoDB的Antelop与Barracuda文件格式" class="headerlink" title="1. InnoDB的Antelop与Barracuda文件格式"></a>1. InnoDB的Antelop与Barracuda文件格式</h2><p>Innodb存储引擎保存记录，是以行的形式存放的（与之对应的是像Google BigTable这种列数据库）。在InnoDB 1.0.x版本之前，InnoDB 存储引擎提供了 <code>Compact</code> 和 <code>Redundant</code> 两种格式来存放行记录数据，这也是目前使用最多的一种格式。Redundant 格式是为兼容之前版本而保留的。</p>
+<p>MySQL 5.1 中的 innodb_plugin 引入了新的<em>文件格式</em>：<code>Barracuda</code>（将以前的<em>行格式</em> compact 和 redundant 合称为<code>Antelope</code>），该文件格式拥有新的两种行格式：<code>compressed</code>和<code>dynamic</code>。</p>
+<p>在 MySQL 5.6 版本中，默认还是 Compact 行格式，也是目前使用最多的一种 ROW FORMAT。用户可以通过命令 <code>SHOW TABLE STATUS LIKE&#39;table_name&#39;</code> 来查看当前表使用的行格式，其中 <em>row_format</em> 列表示当前所使用的行记录结构类型。</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; show variables like <span class="string">"innodb_file_format"</span>;</span><br><span class="line">+--------------------+-----------+</span><br><span class="line">|<span class="string"> Variable_name      </span>|<span class="string"> Value     </span>|</span><br><span class="line">+--------------------+-----------+</span><br><span class="line">|<span class="string"> innodb_file_format </span>|<span class="string"> Barracuda </span>|</span><br><span class="line">+--------------------+-----------+</span><br><span class="line">1 row in set</span><br><span class="line"></span><br><span class="line">mysql&gt; show table status like <span class="string">"tablename%"</span>\G</span><br><span class="line"><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span> 1. row <span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span><span class="keyword">*</span></span><br><span class="line">           Name: t_rf_compact</span><br><span class="line">         Engine: InnoDB</span><br><span class="line">        Version: 10</span><br><span class="line">     Row_format: Compact</span><br><span class="line">           Rows: 4</span><br><span class="line"> Avg_row_length: 36864</span><br><span class="line">    Data_length: 147456</span><br><span class="line">Max_data_length: 0</span><br><span class="line">   Index_length: 0</span><br><span class="line">      Data_free: 0</span><br><span class="line"> Auto_increment: 7</span><br><span class="line">    Create_time: 2016-05-14 20:52:58</span><br><span class="line">    Update_time: NULL</span><br><span class="line">     Check_time: NULL</span><br><span class="line">      Collation: utf8_general_ci</span><br><span class="line">       Checksum: NULL</span><br><span class="line"> Create_options: </span><br><span class="line">        Comment: </span><br><span class="line">1 row in set (0.00 sec)</span><br></pre></td></tr></table></figure>
+<p>在 msyql 5.7.9 及以后版本，默认行格式由<code>innodb_default_row_format</code>变量决定，它的默认值是<code>DYNAMIC</code>，也可以在 create table 的时候指定<code>ROW_FORMAT=DYNAMIC</code>。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/05/18/mysql-blob-row_format/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/05/11/mysql-dev-principle-ec/" itemprop="url">
                   MySQL数据库开发规范-EC
                 </a>
@@ -905,142 +1027,6 @@ http://www.iteye.com/topic/1141229
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2016/03/28/mysql-sysbench/" itemprop="url">
-                  使用sysbench对mysql压力测试
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">Posted on</span>
-            <time itemprop="dateCreated" datetime="2016-03-28T16:32:49+08:00" content="2016-03-28">
-              2016-03-28
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/MySQL/" itemprop="url" rel="index">
-                    <span itemprop="name">MySQL</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2016/03/28/mysql-sysbench/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/03/28/mysql-sysbench/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>sysbench是一个模块化的、跨平台、多线程基准测试工具，主要用于评估测试各种不同系统参数下的数据库负载情况。关于这个项目的详细介绍请看：<a href="https://github.com/akopytov/sysbench">https://github.com/akopytov/sysbench</a> 。<br>它主要包括以下几种方式的测试：</p>
-<ol>
-<li>cpu性能</li>
-<li>磁盘io性能</li>
-<li>调度程序性能</li>
-<li>内存分配及传输速度</li>
-<li>POSIX线程性能</li>
-<li>数据库性能(OLTP基准测试)</li>
-</ol>
-<p>sysbench的数据库OLTP测试支持MySQL、PostgreSQL、Oracle，目前主要用于Linux操作系统，开源社区已经将sysbench移植到了Windows，并支持SQL Server的基准测试。</p>
-<p>废话不多说，开始。</p>
-<h2 id="1-sysbench安装"><a href="#1-sysbench安装" class="headerlink" title="1. sysbench安装"></a>1. sysbench安装</h2><ul>
-<li>mysql版本: mysql-community-server-5.6.29   </li>
-<li>OS: CentOS 6.7 X86_64</li>
-<li>sysbench 0.5相比0.4版本有一些变化，包括oltp测试结合了lua脚本，还多了一些隐藏选项，本文会涉及得到一部分。</li>
-</ul>
-<p>目前许多仓库里已编译好的二进制sysbench还是0.4.x版本，不过现在主流也还是github上的0.5，可以从 <a href="http://www.lefred.be/node/154">这里</a>下载0.5版本的rpm包直接安装，不过我选择自己编译，因为只有这个办法是通用的。</p>
-<figure class="highlight groovy"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 先安装编译依赖环境</span></span><br><span class="line">$ sudo yum install gcc gcc-c++ automake make  libtool mysql-community-devel</span><br><span class="line"></span><br><span class="line">$ cd <span class="regexp">/tmp &amp;&amp; git clone https:/</span><span class="regexp">/github.com/</span>akopytov/sysbench.git</span><br><span class="line"></span><br><span class="line">$ cd <span class="regexp">/tmp/</span>sysbench &amp;&amp; ./autogen.sh</span><br><span class="line">$ .<span class="regexp">/configure --prefix=/</span>usr<span class="regexp">/local/</span>sysbench<span class="number">-0.5</span></span><br><span class="line">$ ./make &amp;&amp; sudo make install</span><br><span class="line"></span><br><span class="line"><span class="comment">// 0.5版本需要oltp.lua测试脚本</span></span><br><span class="line"><span class="comment">// 如果是rpm包方式安装的，在 /usr/share/doc/sysbench/tests/db/ 下可找到</span></span><br><span class="line">$ cd <span class="regexp">/usr/</span>local<span class="regexp">/sysbench &amp;&amp; sudo mkdir -p share/</span>tests/db</span><br><span class="line">$ cp <span class="regexp">/tmp/</span>sysbench<span class="regexp">/sysbench/</span>tests<span class="regexp">/db/</span>*.lua share<span class="regexp">/tests/</span>db/</span><br><span class="line">$ .<span class="regexp">/bin/</span>sysbench --version</span><br><span class="line">sysbench <span class="number">0.5</span></span><br></pre></td></tr></table></figure>
-<p>如果需要测试PostgreSQL、Oracle，则在configure时需要加上 –with-oracle 或者 –with-pgsql 参数</p>
-<h2 id="2-使用sysbench对mysql压测"><a href="#2-使用sysbench对mysql压测" class="headerlink" title="2. 使用sysbench对mysql压测"></a>2. 使用sysbench对mysql压测</h2><h3 id="2-1-只读示例"><a href="#2-1-只读示例" class="headerlink" title="2.1 只读示例"></a>2.1 只读示例</h3><figure class="highlight brainfuck"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="string">.</span><span class="comment">/bin/sysbench</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">test=</span><span class="string">.</span><span class="comment">/share/tests/db/oltp</span><span class="string">.</span><span class="comment">lua</span> <span class="comment">\</span></span><br><span class="line"><span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">host=10</span><span class="string">.</span><span class="comment">0</span><span class="string">.</span><span class="comment">201</span><span class="string">.</span><span class="comment">36</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">port=8066</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">user=ecuser</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">password=ecuser</span> <span class="comment">\</span></span><br><span class="line"><span class="literal">-</span><span class="literal">-</span><span class="comment">mysql</span><span class="literal">-</span><span class="comment">db=dbtest1a</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">tables</span><span class="literal">-</span><span class="comment">count=10</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">table</span><span class="literal">-</span><span class="comment">size=500000</span> <span class="comment">\</span></span><br><span class="line"><span class="literal">-</span><span class="literal">-</span><span class="comment">report</span><span class="literal">-</span><span class="comment">interval=10</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">dist</span><span class="literal">-</span><span class="comment">type=uniform</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">rand</span><span class="literal">-</span><span class="comment">init=on</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">requests=0</span> <span class="comment">\</span></span><br><span class="line"><span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">test</span><span class="literal">-</span><span class="comment">mode=nontrx</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">nontrx</span><span class="literal">-</span><span class="comment">mode=select</span> <span class="comment">\</span></span><br><span class="line"><span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">read</span><span class="literal">-</span><span class="comment">only=on</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">oltp</span><span class="literal">-</span><span class="comment">skip</span><span class="literal">-</span><span class="comment">trx=on</span> <span class="comment">\</span></span><br><span class="line"><span class="literal">-</span><span class="literal">-</span><span class="comment">max</span><span class="literal">-</span><span class="comment">time=120</span> <span class="literal">-</span><span class="literal">-</span><span class="comment">num</span><span class="literal">-</span><span class="comment">threads=12</span> <span class="comment">\</span></span><br><span class="line"><span class="title">[</span><span class="comment">prepare|run|cleanup</span><span class="title">]</span></span><br></pre></td></tr></table></figure>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2016/03/28/mysql-sysbench/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
@@ -1086,7 +1072,7 @@ http://www.iteye.com/topic/1141229
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">74</span>
+              <span class="site-state-item-count">75</span>
               <span class="site-state-item-name">posts</span>
             </a>
           </div>
