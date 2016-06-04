@@ -404,7 +404,7 @@
 <li><p><strong>修改主键</strong></p>
 </li>
 </ul>
-<p>在我的环境里有不少表设计之初没有自增id，而是采用复合主键，pt-osc 对删除、添加主键会特殊处理，详见 <a href=""></a>。</p>
+<p>在我的环境里有不少表设计之初没有自增id，而是采用复合主键，pt-osc 对删除、添加主键会特殊处理，详见 <a href="http://seanlook/2016/05/27/mysql-pt-osc-add-primarykey" target="_blank" rel="external">这里</a>。</p>
 <h2 id="6-错误处理"><a href="#6-错误处理" class="headerlink" title="6. 错误处理"></a>6. 错误处理</h2><p><strong>1. 存在trigger </strong><br><figure class="highlight sql"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">[zx@mysql-5 ~]$ pt-online-schema-<span class="keyword">change</span>  -u <span class="keyword">user</span> -p <span class="keyword">password</span> -h <span class="number">10.0</span><span class="number">.200</span><span class="number">.195</span> \</span><br><span class="line"><span class="comment">--alter="MODIFY COLUMN f_receiver  varchar(128)                                                      NOT NULL DEFAULT '' AFTER f_user_id" --dry-run D=db_name,t=table_name</span></span><br><span class="line">The <span class="keyword">table</span> <span class="string">`db_name`</span>.<span class="string">`table_name`</span> has <span class="keyword">triggers</span>.  This tool needs <span class="keyword">to</span> <span class="keyword">create</span> its own <span class="keyword">triggers</span>, so the <span class="keyword">table</span> cannot already have <span class="keyword">triggers</span>.</span><br></pre></td></tr></table></figure></p>
 <p>表上存在触发器，不适用。</p>
 <p><strong>2. no-version-check  </strong><br><figure class="highlight stata"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">$ pt-online-schema-change -uuser -ppassword --alter <span class="string">"add key id_provice(f_provice)"</span> \</span><br><span class="line"><span class="keyword">D</span>=db_name,t=tb_name -<span class="keyword">h</span> rdsxxxxxx.mysql.rds.aliyuncs.com</span><br><span class="line">Can't <span class="keyword">use</span> <span class="keyword">an</span> undefined value <span class="keyword">as</span> <span class="keyword">an</span> ARRAY reference at /usr/bin/pt-online-schema-change <span class="keyword">line</span> 7335.</span><br></pre></td></tr></table></figure></p>
@@ -444,8 +444,8 @@
         <div class="post-nav">
           <div class="post-nav-next post-nav-item">
             
-              <a href="/2016/05/24/mysql-online-ddl-concept/" rel="next" title="mysql 5.6 原生Online DDL解析">
-                <i class="fa fa-chevron-left"></i> mysql 5.6 原生Online DDL解析
+              <a href="/2016/05/27/mysql-pt-osc-add-primarykey/" rel="next" title="使用pt-osc修改主键时注意">
+                <i class="fa fa-chevron-left"></i> 使用pt-osc修改主键时注意
               </a>
             
           </div>
@@ -522,7 +522,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">77</span>
+              <span class="site-state-item-count">79</span>
               <span class="site-state-item-name">posts</span>
             </a>
           </div>
@@ -539,7 +539,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">103</span>
+                <span class="site-state-item-count">104</span>
                 <span class="site-state-item-name">tags</span>
               </a>
             </div>
