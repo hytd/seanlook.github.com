@@ -254,6 +254,382 @@
             
               
                 
+                <a class="post-title-link" href="/2016/04/29/mysql-numeric-int-float/" itemprop="url">
+                  MySQL数字类型int与tinyint、float与decimal如何选择
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-04-29T16:32:49+08:00" content="2016-04-29">
+              2016-04-29
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/04/29/mysql-numeric-int-float/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/04/29/mysql-numeric-int-float/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>最近在准备给开发做一个mysql数据库开发规范方面培训，一步一步来，结合在生产环境发现的数据库方面的问题，从几个常用的数据类型说起。</p>
+<h2 id="int、tinyint与bigint"><a href="#int、tinyint与bigint" class="headerlink" title="int、tinyint与bigint"></a>int、tinyint与bigint</h2><p>它们都是（精确）整型数据类型，但是占用字节数和表达的范围不同。首先没有这个表就说不过去了：</p>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Storage</th>
+<th>Minimum Value</th>
+<th>Maximum Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td></td>
+<td>(Bytes)</td>
+<td>(Signed/Unsigned)</td>
+<td>(Signed/Unsigned)</td>
+</tr>
+<tr>
+<td>TINYINT</td>
+<td>1</td>
+<td>-128</td>
+<td>127</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>0</td>
+<td>255</td>
+</tr>
+<tr>
+<td>SMALLINT</td>
+<td>2</td>
+<td>-32768</td>
+<td>32767</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>0</td>
+<td>65535</td>
+</tr>
+<tr>
+<td>MEDIUMINT</td>
+<td>3</td>
+<td>-8388608</td>
+<td>8388607</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>0</td>
+<td>16777215</td>
+</tr>
+<tr>
+<td>INT</td>
+<td>4</td>
+<td>-2147483648</td>
+<td>2147483647</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>0</td>
+<td>4294967295</td>
+</tr>
+<tr>
+<td>BIGINT</td>
+<td>8</td>
+<td>-9223372036854775808</td>
+<td>9223372036854775807</td>
+</tr>
+<tr>
+<td></td>
+<td></td>
+<td>0</td>
+<td>18446744073709551615</td>
+</tr>
+</tbody>
+</table>
+<p>只需要知道对应类型占多少字节就能推算出范围了，比如int占 4 bytes,即4*8=32bits，大约10位数字，也能理解为什么int默认显示位数是11。</p>
+<p>遇到比较多的是tinyint和bigint，tinyint一般用于存放status,type这种数值小的数据，不够用时可能会用smallint。bigint一般用于自增主键。</p>
+<p>为了避免数据库被过度设计，布尔、枚举类型也采用tinyint。</p>
+<p>还有一点也是经常被提到的关于 int(M) 中M的理解，int型数据无论是int(4)还是int(11)，都已经占用了 4 bytes 存储空间，M表示的只是显示宽度(display width, max value 255)，并不是定义int的长度。</p>
+<p>例如：</p>
+<figure class="highlight gherkin"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">mysql&gt; CREATE TABLE `tc_integer` (</span><br><span class="line">  `f_id` bigint(20) PRIMARY KEY AUTO_INCREMENT,</span><br><span class="line">  `f_type` tinyint,</span><br><span class="line">  `f_flag` tinyint(1),</span><br><span class="line">  `f_num` smallint(5) unsigned ZEROFILL</span><br><span class="line">) ENGINE=InnoDB DEFAULT CHARSET=utf8;</span><br><span class="line"></span><br><span class="line">mysql&gt; desc tc_integer;</span><br><span class="line">+----------------+-------------------------------+------+-----+---------+----------------+</span><br><span class="line">|<span class="string"> Field          </span>|<span class="string"> Type                          </span>|<span class="string"> Null </span>|<span class="string"> Key </span>|<span class="string"> Default </span>|<span class="string"> Extra          </span>|</span><br><span class="line">+----------------+-------------------------------+------+-----+---------+----------------+</span><br><span class="line">|<span class="string"> f_id           </span>|<span class="string"> bigint(20)                    </span>|<span class="string"> NO   </span>|<span class="string"> PRI </span>|<span class="string"> NULL    </span>|<span class="string"> auto_increment </span>|</span><br><span class="line">|<span class="string"> f_type         </span>|<span class="string"> tinyint(4)                    </span>|<span class="string"> YES  </span>|<span class="string">     </span>|<span class="string"> NULL    </span>|<span class="string">                </span>|</span><br><span class="line">|<span class="string"> f_flag         </span>|<span class="string"> tinyint(1)                    </span>|<span class="string"> YES  </span>|<span class="string">     </span>|<span class="string"> NULL    </span>|<span class="string">                </span>|</span><br><span class="line">|<span class="string"> f_num          </span>|<span class="string"> smallint(5) unsigned zerofill </span>|<span class="string"> YES  </span>|<span class="string">     </span>|<span class="string"> NULL    </span>|<span class="string">                </span>|</span><br><span class="line">+----------------+-------------------------------+------+-----+---------+----------------+</span><br><span class="line">4 rows in set (0.01 sec)</span><br></pre></td></tr></table></figure>
+<p>插入几条数据看一下：<br>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/04/29/mysql-numeric-int-float/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
+                <a class="post-title-link" href="/2016/04/28/mysql-char-varchar-set/" itemprop="url">
+                  MySQL字符数据类型char与varchar的区别
+                </a>
+              
+            
+          </h1>
+        
+
+        <div class="post-meta">
+          <span class="post-time">
+            <span class="post-meta-item-icon">
+              <i class="fa fa-calendar-o"></i>
+            </span>
+            <span class="post-meta-item-text">Posted on</span>
+            <time itemprop="dateCreated" datetime="2016-04-28T16:32:49+08:00" content="2016-04-28">
+              2016-04-28
+            </time>
+          </span>
+
+          
+            <span class="post-category" >
+              &nbsp; | &nbsp;
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+              
+                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
+                  <a href="/categories/MySQL/" itemprop="url" rel="index">
+                    <span itemprop="name">MySQL</span>
+                  </a>
+                </span>
+
+                
+                
+
+              
+            </span>
+          
+
+          
+            
+              <span class="post-comments-count">
+                &nbsp; | &nbsp;
+                <a href="/2016/04/28/mysql-char-varchar-set/#comments" itemprop="discussionUrl">
+                  <span class="post-comments-count ds-thread-count" data-thread-key="2016/04/28/mysql-char-varchar-set/" itemprop="commentsCount"></span>
+                </a>
+              </span>
+            
+          
+
+          
+
+          
+          
+
+        </div>
+      </header>
+    
+
+
+    <div class="post-body" itemprop="articleBody">
+
+      
+      
+
+      
+        
+          <p>数据类型差不多是接触mysql一开始就了解的内容，最近遇到几个现象如varchar自动转mediumtext，blob存储性能的问题，不得不回头明确一下关于MySQL常用数据类型的选择。</p>
+<p><a href="http://dev.mysql.com/doc/refman/5.6/en/char.html">mysql手册这里</a> 已经讲的很清楚了。它们都是定义字符串型字段时常用的类型，但它们存储和检索的方式有不同，最大长度和尾部的空格是否保留也有差别。</p>
+<p><code>char</code>类型是使用固定长度空间进行存储，范围0-255。比如<code>CHAR(30)</code>能放30个字节，存放abcd时，尾部会以空格补齐，实际占用空间 30bytes 。检索它的时候尾部空格会被去除。</p>
+<p>char善于存储经常改变的值，或者长度相对固定的值，比如type、ip地址或md5之类的数据，不容易产生碎片。关于它的效率可以参考<a href="http://bbs.chinaunix.net/thread-1696053-1-1.html">这里</a>。</p>
+<p><code>varchar</code>类型保存可变长度字符串，范围0-65535（但受到单行最大64kb的限制）。比如用<code>varchar(30)</code>去存放abcd，实际使用5个字节，因为还需要使用额外1个字节来标识字串长度（0-255使用1个字节，超过255需要2个字节）。</p>
+<p>varchar善于存储值的长短不一的列，也是用的最多的一种类型，节省磁盘空间。update时varchar列时，如果新数据比原数据大，数据库需要重新开辟空间，这一点会有性能略有损耗，但innodb引擎下查询效率比char高一点。这也是innodb官方推荐的类型。</p>
+<p>如果存储时真实长度超过了char或者varchar定义的最大长度呢？</p>
+<ul>
+<li>在SQL严格模式下，无论char还是varchar，如果尾部要被截断的是非空格，会提示错误，即插入失败</li>
+<li>在SQL非严格模式下，无论char还是varchar，如果尾部要被截断的是非空格，会提示warning，但可以成功</li>
+<li>如果尾部要被截断的是空格，无论SQL所处模式，varchar都可以插入成功但提示warning；char也可以插入成功，并且无任何提示</li>
+</ul>
+<p>这里特意提到SQL的严格模式，是因为在工作中也遇到过一些坑，参考<a href="">MySQL的sql_mode严格模式注意点</a>。</p>
+<p>贴上官方的一个表格：</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>CHAR(4)</th>
+<th>Storage Required</th>
+<th>VARCHAR(4)</th>
+<th>Storage Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>‘’</td>
+<td>‘    ‘</td>
+<td>4 bytes</td>
+<td>‘’</td>
+<td>1 byte</td>
+</tr>
+<tr>
+<td>‘ab’</td>
+<td>‘ab  ‘</td>
+<td>4 bytes</td>
+<td>‘ab’</td>
+<td>3 bytes</td>
+</tr>
+<tr>
+<td>‘abcd’</td>
+<td>‘abcd’</td>
+<td>4 bytes</td>
+<td>‘abcd’</td>
+<td>5 bytes</td>
+</tr>
+<tr>
+<td>‘abcdefgh’</td>
+<td>‘abcd’</td>
+<td>4 bytes</td>
+<td>‘abcd’</td>
+<td>5 bytes</td>
+</tr>
+</tbody>
+</table>
+<p>另外，mysql字段值比较时默认是不区分大小写的，这是由于他们的校对规则（一般是 utf8_general_ci）决定的，按字符比较，所以查询时 值尾部 的空格也是被忽略的，除非建表时对列指定 <code>BINARY</code> （校对字符集变成utf8_bin）或者<code>select * from vc where binary v=&#39;ab  &#39;;</code>，就会按字节比较，即比较时区分大小写和尾部空格。</p>
+<p>需要注意的是，使用varchar不能因为长度可变就随意分大空间，比如90个字节能放够的列定义成varchar(200)，因为开辟内存时是以200字节进行的，遇到需要filesort或tmp table作业可能会带来不利影响。</p>
+          <div class="post-more-link text-center">
+            <a class="btn" href="/2016/04/28/mysql-char-varchar-set/#more" rel="contents">
+              Read more &raquo;
+            </a>
+          </div>
+        
+      
+    </div>
+
+    <div>
+      
+    </div>
+
+    <footer class="post-footer">
+      
+
+      
+
+      
+      
+        <div class="post-eof"></div>
+      
+    </footer>
+  </article>
+
+
+    
+      
+
+  
+  
+
+  
+  
+  
+
+  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
+
+    
+      <header class="post-header">
+
+        
+        
+          <h1 class="post-title" itemprop="name headline">
+            
+            
+              
+                
                 <a class="post-title-link" href="/2016/03/28/mysql-sysbench/" itemprop="url">
                   使用sysbench对mysql压力测试
                 </a>
@@ -624,278 +1000,11 @@
 
 
     
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2015/12/14/mysql-replicas/" itemprop="url">
-                  使用 Xtrabackup 在线对MySQL做主从复制
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">Posted on</span>
-            <time itemprop="dateCreated" datetime="2015-12-14T10:21:25+08:00" content="2015-12-14">
-              2015-12-14
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/MySQL/" itemprop="url" rel="index">
-                    <span itemprop="name">MySQL</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/12/14/mysql-replicas/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/12/14/mysql-replicas/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <h2 id="1-说明"><a href="#1-说明" class="headerlink" title="1. 说明"></a>1. 说明</h2><h3 id="1-1-xtrabackup"><a href="#1-1-xtrabackup" class="headerlink" title="1.1 xtrabackup"></a>1.1 xtrabackup</h3><p>mysqldump对于导出10G以下的数据库或几个表，还是适用的，而且更快捷。一旦数据量达到100-500G，无论是对原库的压力还是导出的性能，mysqldump就力不从心了。Percona-Xtrabackup备份工具，是实现MySQL在线热备工作的不二选择，可进行全量、增量、单表备份和还原。（但当数据量更大时，可能需要考虑分库分表，或使用 LVM 快照来加快备份速度了）</p>
-<p>2.2版本 xtrabackup 能对InnoDB和XtraDB存储引擎的数据库非阻塞地备份，innobackupex通过perl封装了一层xtrabackup，对MyISAM的备份通过加表读锁的方式实现。2.3版本 xtrabackup 命令直接支持MyISAM引擎。</p>
-<p>XtraBackup优势 ：</p>
-<ol>
-<li>无需停止数据库进行InnoDB热备</li>
-<li>增量备份MySQL</li>
-<li>流压缩到传输到其它服务器</li>
-<li>能比较容易地创建主从同步</li>
-<li>备份MySQL时不会增大服务器负载</li>
-</ol>
-<h3 id="1-2-replication"><a href="#1-2-replication" class="headerlink" title="1.2 replication"></a>1.2 replication</h3><ol>
-<li><p><strong>为什么要做主从复制？</strong><br>我想这是要在实施以前要想清楚的问题。是为了实现读写分离，减轻主库负载或数据分析？ 为了数据安全，做备份恢复？主从切换做高可用？<br>大部分场景下，以上三个问号一主一从都能够解决，而且任何生产环境都建议你至少要有一个从库，假如你的读操作压力特别大，甚至要做一主多从，还可以不同的slave扮演不同的角色，例如使用不同的索引，或者不同的存储引擎，或使用一个小内存server做slave只用于备份。（当然slave太多也会对master的负载和网络带宽造成压力，此时可以考虑级联复制，即 A-&gt;B-&gt;C ）</p>
-<p> 还有需要考虑的是，一主一从，一旦做了主从切换，不通过其它HA手段干预的话，业务访问的还是原IP，而且原主库很容易就作废了。于是 主-主 复制就产生了，凭借各自不同的 server-id ，可以避免 “A的变化同步到B，B应用变化又同步到A” 这样循环复制的问题。但建议是，主主复制，其中一个主库强制设置为只读，主从切换后架构依然是可用的。</p>
-<p> 复制过程是slave主动向master拉取，而不是master去推的，所以理想情况下做搭建主从时不需要master做出任何改变甚至停服，slave失败也不影响主库。</p>
-</li>
-</ol>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/12/14/mysql-replicas/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
-      
-
-  
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal " itemscope itemtype="http://schema.org/Article">
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-            
-            
-              
-                
-                <a class="post-title-link" href="/2015/11/01/nan-shan-hike/" itemprop="url">
-                  南山南
-                </a>
-              
-            
-          </h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            <span class="post-meta-item-icon">
-              <i class="fa fa-calendar-o"></i>
-            </span>
-            <span class="post-meta-item-text">Posted on</span>
-            <time itemprop="dateCreated" datetime="2015-11-01T11:59:31+08:00" content="2015-11-01">
-              2015-11-01
-            </time>
-          </span>
-
-          
-            <span class="post-category" >
-              &nbsp; | &nbsp;
-              <span class="post-meta-item-icon">
-                <i class="fa fa-folder-o"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/生活/" itemprop="url" rel="index">
-                    <span itemprop="name">生活</span>
-                  </a>
-                </span>
-
-                
-                
-                  , 
-                
-
-              
-                <span itemprop="about" itemscope itemtype="https://schema.org/Thing">
-                  <a href="/categories/生活/随记/" itemprop="url" rel="index">
-                    <span itemprop="name">随记</span>
-                  </a>
-                </span>
-
-                
-                
-
-              
-            </span>
-          
-
-          
-            
-              <span class="post-comments-count">
-                &nbsp; | &nbsp;
-                <a href="/2015/11/01/nan-shan-hike/#comments" itemprop="discussionUrl">
-                  <span class="post-comments-count ds-thread-count" data-thread-key="2015/11/01/nan-shan-hike/" itemprop="commentsCount"></span>
-                </a>
-              </span>
-            
-          
-
-          
-
-          
-          
-
-        </div>
-      </header>
-    
-
-
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          <p>今天11月1号，深圳的天气正好从这一天凉了起来，傍晚回住处的公交车上给家里打了个电话，是爸爸接的，说家里已经有点冷了。</p>
-<p>现在对冷没什么概念了，深圳是一个没有冬天的城市，一件外套就能过冬。也就是今天起风了出门才稍稍感觉到凉，昨天还热的不行呢——那是因为去爬山了。</p>
-<p>南山，2年前来这里的第一个月就听说过，但两次上过梧桐山，上半年爬过凤凰山，就偏偏离自己最近的南山未曾到访。山虽然不高，但一直放着不去还能再找到人陪我去不成，于是就响应党组织号召，登山去。</p>
-<p>周六下午，小明从公司过去，而我从家里坐公交过去，照计划的时间应该2点半可以集合，无奈在深大转车多等了20分钟，结果是小明跟其他人一起先从海关登山口上山，先到山顶者有奖，我晚十分钟到出发点，去追他们。出乎意料，迈进登山口就一直上台阶，上啊上啊上，T恤已经全湿了，我竟然还穿着紧身牛仔裤！（其实主要考虑到晚上吃饭方便）。由于平时也打打球，体力不算太差，20分钟上到了全程海拔一半的样子，还没追上，双腿力量也下降了，正好碰到没跟上大部队的两个人，就一起走了。后半程坡也小了很多，吹来一丝微风能感觉到背上一阵凉意。此时群里已经有人到观景台发图了，但奇怪的是那么一大波上去怎么才有2个人发图，原来拼的不仅仅是体力，还有手机信号……</p>
-<p>三点半时基本上都到顶了，风景还不错，能看到深圳湾大桥（据说晚上很美），和对面的香港。</p>
-<p><img src="http://7q5fot.com1.z0.glb.clouddn.com/nan-hilltop.jpg" alt="nan-hilltop.jpg"></p>
-<p>团体里大部分我是认识的，有我以前的同事，和球场上认识的伙伴。虽然我已离职近4个月，但我党组织关系还在TP，也交了党费，这才有机会和他们一起出来。还有经费，号召大家买书，于是买了《摄影的艺术》《皮囊》等，小明也为他单反买了本，我看中的是他那本室内装饰和川菜食谱，嘿嘿。</p>
-          <div class="post-more-link text-center">
-            <a class="btn" href="/2015/11/01/nan-shan-hike/#more" rel="contents">
-              Read more &raquo;
-            </a>
-          </div>
-        
-      
-    </div>
-
-    <div>
-      
-    </div>
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </article>
-
-
-    
   </section>
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/15/">15</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right"></i></a>
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/16/">16</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right"></i></a>
   </nav>
 
 
@@ -936,7 +1045,7 @@
         <nav class="site-state motion-element">
           <div class="site-state-item site-state-posts">
             <a href="/archives">
-              <span class="site-state-item-count">75</span>
+              <span class="site-state-item-count">77</span>
               <span class="site-state-item-name">posts</span>
             </a>
           </div>
@@ -953,7 +1062,7 @@
           
             <div class="site-state-item site-state-tags">
               <a href="/tags">
-                <span class="site-state-item-count">102</span>
+                <span class="site-state-item-count">103</span>
                 <span class="site-state-item-name">tags</span>
               </a>
             </div>
