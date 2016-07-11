@@ -9,14 +9,14 @@
   </url>
   
   <url>
-    <loc>http://seanlook.com/2016/05/27/mysql-pt-online-schema-change/</loc>
+    <loc>http://seanlook.com/2016/05/27/mysql-pt-osc-add-primarykey/</loc>
     
     <lastmod>2016-05-27T08:32:49.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://seanlook.com/2016/05/27/mysql-pt-osc-add-primarykey/</loc>
+    <loc>http://seanlook.com/2016/05/27/mysql-pt-online-schema-change/</loc>
     
     <lastmod>2016-05-27T08:32:49.000Z</lastmod>
     
@@ -65,6 +65,13 @@
   </url>
   
   <url>
+    <loc>http://seanlook.com/2016/04/22/mysql-sql-mode-troubleshooting/</loc>
+    
+    <lastmod>2016-04-22T08:32:49.000Z</lastmod>
+    
+  </url>
+  
+  <url>
     <loc>http://seanlook.com/2016/04/05/mysql-avoid-or-query/</loc>
     
     <lastmod>2016-04-05T08:32:49.000Z</lastmod>
@@ -100,14 +107,14 @@
   </url>
   
   <url>
-    <loc>http://seanlook.com/archives/index.html</loc>
+    <loc>http://seanlook.com/about/index.html</loc>
     
     <lastmod>2016-03-02T08:23:01.965Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://seanlook.com/about/index.html</loc>
+    <loc>http://seanlook.com/archives/index.html</loc>
     
     <lastmod>2016-03-02T08:23:01.965Z</lastmod>
     
@@ -527,14 +534,14 @@
   </url>
   
   <url>
-    <loc>http://seanlook.com/2014/10/26/docker-installed-centos6-successfully/</loc>
+    <loc>http://seanlook.com/2014/10/24/upgrade-centos6_kernel-to-3.10.x/</loc>
     
     <lastmod>2014-10-27T02:46:23.000Z</lastmod>
     
   </url>
   
   <url>
-    <loc>http://seanlook.com/2014/10/24/upgrade-centos6_kernel-to-3.10.x/</loc>
+    <loc>http://seanlook.com/2014/10/26/docker-installed-centos6-successfully/</loc>
     
     <lastmod>2014-10-27T02:46:23.000Z</lastmod>
     
